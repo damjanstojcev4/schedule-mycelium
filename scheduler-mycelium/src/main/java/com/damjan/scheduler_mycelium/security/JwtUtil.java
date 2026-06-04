@@ -20,7 +20,16 @@ public class JwtUtil {
 
     public JwtUtil(JwtConfig jwtConfig) {
         this.jwtConfig = jwtConfig;
-        this.key = Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8));
+        
+        String secret = jwtConfig.getSecret();
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException("JWT secret is not configured. Please set jwt.secret in application.properties.");
+        }
+        if (secret.length() < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 characters long for HS256.");
+        }
+        
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(Account account) {
