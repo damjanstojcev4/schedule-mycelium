@@ -19,7 +19,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         List<Appointment> findByStaffMemberAndStartTimeBetween(Long staffMemberId, LocalDateTime startTime,
                         LocalDateTime endTime);
 
-        boolean existsByStaffMemberIdAndStartTimeBetween(Long staffMemberId, LocalDateTime startTime);
+        boolean existsByStaffMemberIdAndStartTimeBetween(Long staffMemberId, LocalDateTime startTime,
+                        LocalDateTime endTime);
 
         @Query("""
                         SELECT COUNT(a) > 0 FROM Appointment a
