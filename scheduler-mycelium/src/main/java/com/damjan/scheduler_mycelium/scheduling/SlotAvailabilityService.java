@@ -1,6 +1,7 @@
 package com.damjan.scheduler_mycelium.scheduling;
 
 import com.damjan.scheduler_mycelium.domain.appointment.AppointmentRepository;
+import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import com.damjan.scheduler_mycelium.domain.appointment.dto.AvailableSlotsResponseDTO;
 import com.damjan.scheduler_mycelium.domain.business.BusinessClosureRepository;
 import com.damjan.scheduler_mycelium.domain.business.BusinessSettings;
@@ -39,13 +40,13 @@ public class SlotAvailabilityService {
         }
 
         StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new IllegalArgumentException("Staff not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
         Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new IllegalArgumentException("Service not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
         BusinessSettings settings = businessSettingsRepository.findByBusinessId(businessId)
-                .orElseThrow(() -> new IllegalArgumentException("Business settings not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Business settings not found"));
 
         LocalTime workStart = staff.getWorkStart();
         LocalTime workEnd = staff.getWorkEnd();
@@ -74,7 +75,7 @@ public class SlotAvailabilityService {
 
     public boolean isSlotAvailable(Long staffId, LocalDateTime startTime, LocalDateTime endTime) {
         StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new IllegalArgumentException("Staff not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
         LocalDate date = startTime.toLocalDate();
         Long businessId = staff.getBusiness().getId();

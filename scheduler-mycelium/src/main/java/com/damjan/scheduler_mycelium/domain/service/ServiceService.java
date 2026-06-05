@@ -4,6 +4,7 @@ import com.damjan.scheduler_mycelium.domain.business.Business;
 import com.damjan.scheduler_mycelium.domain.business.BusinessRepository;
 import com.damjan.scheduler_mycelium.domain.service.dto.*;
 import com.damjan.scheduler_mycelium.exception.BusinessNotFoundException;
+import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import com.damjan.scheduler_mycelium.security.TenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -52,7 +53,7 @@ public class ServiceService {
         tenantGuard.assertOwner(businessId, auth);
 
         Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new IllegalArgumentException("Service not found with id: " + serviceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found with id: " + serviceId));
 
         if (!service.getBusiness().getId().equals(businessId)) {
             throw new IllegalArgumentException("Service does not belong to this business");
@@ -73,7 +74,7 @@ public class ServiceService {
         tenantGuard.assertOwner(businessId, auth);
 
         Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new IllegalArgumentException("Service not found with id: " + serviceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found with id: " + serviceId));
 
         if (!service.getBusiness().getId().equals(businessId)) {
             throw new IllegalArgumentException("Service does not belong to this business");

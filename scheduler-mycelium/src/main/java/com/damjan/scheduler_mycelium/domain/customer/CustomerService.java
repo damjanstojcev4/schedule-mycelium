@@ -2,6 +2,7 @@ package com.damjan.scheduler_mycelium.domain.customer;
 
 import com.damjan.scheduler_mycelium.domain.customer.dto.CustomerResponseDTO;
 import com.damjan.scheduler_mycelium.domain.customer.dto.UpdateCustomerRequestDTO;
+import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import com.damjan.scheduler_mycelium.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -18,7 +19,7 @@ public class CustomerService {
         Long accountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
         
         Customer customer = customerRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
                 
         return mapToCustomerResponse(customer);
     }
@@ -28,7 +29,7 @@ public class CustomerService {
         Long accountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
         
         Customer customer = customerRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
                 
         if (request.getFullName() != null) customer.setFullName(request.getFullName());
         if (request.getPhone() != null) customer.setPhone(request.getPhone());

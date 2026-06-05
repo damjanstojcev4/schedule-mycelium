@@ -6,6 +6,7 @@ import com.damjan.scheduler_mycelium.domain.business.Business;
 import com.damjan.scheduler_mycelium.domain.business.BusinessRepository;
 import com.damjan.scheduler_mycelium.domain.staff.dto.*;
 import com.damjan.scheduler_mycelium.exception.BusinessNotFoundException;
+import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import com.damjan.scheduler_mycelium.security.TenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -33,7 +34,7 @@ public class StaffMemberService {
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with id: " + businessId));
 
         Account account = accountRepository.findById(request.getAccountId())
-                .orElseThrow(() -> new IllegalArgumentException("Account not found with id: " + request.getAccountId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + request.getAccountId()));
 
         if (account.getRole() != Account.Role.STAFF) {
             throw new IllegalArgumentException("Account must have STAFF role to be added as staff member");
@@ -65,7 +66,7 @@ public class StaffMemberService {
         tenantGuard.assertOwner(businessId, auth);
 
         StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new IllegalArgumentException("Staff member not found with id: " + staffId));
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with id: " + staffId));
 
         if (!staff.getBusiness().getId().equals(businessId)) {
             throw new IllegalArgumentException("Staff member does not belong to this business");
@@ -88,7 +89,7 @@ public class StaffMemberService {
         tenantGuard.assertOwner(businessId, auth);
 
         StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new IllegalArgumentException("Staff member not found with id: " + staffId));
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with id: " + staffId));
 
         if (!staff.getBusiness().getId().equals(businessId)) {
             throw new IllegalArgumentException("Staff member does not belong to this business");
@@ -102,7 +103,7 @@ public class StaffMemberService {
         tenantGuard.assertOwner(businessId, auth);
 
         StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new IllegalArgumentException("Staff member not found with id: " + staffId));
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with id: " + staffId));
 
         if (!staff.getBusiness().getId().equals(businessId)) {
             throw new IllegalArgumentException("Staff member does not belong to this business");
@@ -126,7 +127,7 @@ public class StaffMemberService {
         tenantGuard.assertOwner(businessId, auth);
 
         StaffDayOff dayOff = staffDayOffRepository.findById(dayOffId)
-                .orElseThrow(() -> new IllegalArgumentException("Day off not found with id: " + dayOffId));
+                .orElseThrow(() -> new ResourceNotFoundException("Day off not found with id: " + dayOffId));
 
         if (!dayOff.getStaffMember().getBusiness().getId().equals(businessId)) {
             throw new IllegalArgumentException("Staff member does not belong to this business");

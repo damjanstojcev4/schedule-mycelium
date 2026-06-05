@@ -12,6 +12,7 @@ import com.damjan.scheduler_mycelium.domain.service.Service;
 import com.damjan.scheduler_mycelium.domain.service.ServiceRepository;
 import com.damjan.scheduler_mycelium.domain.staff.StaffMember;
 import com.damjan.scheduler_mycelium.domain.staff.StaffMemberRepository;
+import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import com.damjan.scheduler_mycelium.exception.SlotNotAvailableException;
 import com.damjan.scheduler_mycelium.scheduling.SlotAvailabilityService;
 import com.damjan.scheduler_mycelium.security.TenantGuard;
@@ -42,17 +43,17 @@ public class AppointmentService {
         Long accountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
         
         Customer customer = customerRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
 
         Service service = serviceRepository.findById(request.getServiceId())
-                .orElseThrow(() -> new IllegalArgumentException("Service not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
         if (!service.getIsActive()) {
             throw new IllegalArgumentException("Service is not active");
         }
 
         StaffMember staff = staffMemberRepository.findById(request.getStaffMemberId())
-                .orElseThrow(() -> new IllegalArgumentException("Staff member not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found"));
 
         Business business = staff.getBusiness();
 
@@ -95,7 +96,7 @@ public class AppointmentService {
         };
 
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
         if (appointment.getStatus() != Appointment.Status.BOOKED) {
             throw new IllegalArgumentException("Only booked appointments can be cancelled");
@@ -109,7 +110,7 @@ public class AppointmentService {
             }
 
             BusinessSettings settings = businessSettingsRepository.findByBusinessId(appointment.getBusiness().getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Settings not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Settings not found"));
 
             LocalDateTime cutoffTime = appointment.getStartTime().minusHours(settings.getCancellationCutoffHours());
             if (LocalDateTime.now().isAfter(cutoffTime)) {
@@ -133,7 +134,7 @@ public class AppointmentService {
     @Transactional
     public void completeAppointment(Long appointmentId, Authentication auth) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
         // Let's assume BUSINESS_OWNER or the STAFF assigned can complete it
         boolean isOwner = false;
@@ -166,11 +167,11 @@ public class AppointmentService {
 
         if (role.equals("ROLE_CUSTOMER")) {
             Customer customer = customerRepository.findByAccountId(accountId)
-                    .orElseThrow(() -> new IllegalArgumentException("Customer profile not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
             appointments = appointmentRepository.findByCustomerId(customer.getId());
         } else if (role.equals("ROLE_STAFF")) {
             StaffMember staff = staffMemberRepository.findByAccountId(accountId)
-                    .orElseThrow(() -> new IllegalArgumentException("Staff profile not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
             appointments = appointmentRepository.findByStaffMemberId(staff.getId());
         } else if (role.equals("ROLE_BUSINESS_OWNER")) {
             // Find business for this owner
@@ -189,7 +190,7 @@ public class AppointmentService {
 
     public AppointmentResponseDTO getAppointmentById(Long id, Authentication auth) {
         Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
         // Verify access based on role
         UserDetailsServiceImpl.CustomUserDetails userDetails = (UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal();
@@ -202,7 +203,7 @@ public class AppointmentService {
             }
         } else if (role.equals("ROLE_STAFF")) {
             StaffMember staff = staffMemberRepository.findByAccountId(accountId)
-                    .orElseThrow(() -> new IllegalArgumentException("Staff profile not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
             if (!appointment.getStaffMember().getId().equals(staff.getId())) {
                 throw new AccessDeniedException("Access denied");
             }
