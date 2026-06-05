@@ -1,0 +1,83 @@
+/* Scheduler Mycelium — Swagger UI layout fixes */
+
+.swagger-ui .info {
+  margin: 0 0 24px;
+}
+
+.swagger-ui .info .title {
+  word-break: break-word;
+}
+
+.swagger-ui .info .description,
+.swagger-ui .info .description .renderedMarkdown {
+  max-width: 100%;
+  overflow: visible;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.swagger-ui .info .description p,
+.swagger-ui .info .description li {
+  margin: 0.5em 0;
+}
+
+.swagger-ui .info .description pre,
+.swagger-ui .info .description code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.swagger-ui .opblock-description-wrapper,
+.swagger-ui .opblock-external-docs-wrapper,
+.swagger-ui .opblock-summary-description {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.swagger-ui .opblock-summary {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.swagger-ui .opblock-summary-path {
+  word-break: break-all;
+  max-width: 100%;
+}
+
+.swagger-ui table.parameters,
+.swagger-ui table.responses-table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.swagger-ui .parameters-col_name,
+.swagger-ui .response-col_status {
+  width: 28%;
+  vertical-align: top;
+  padding-top: 12px;
+  word-break: break-word;
+}
+
+.swagger-ui .parameters-col_description,
+.swagger-ui .response-col_description {
+  width: 72%;
+  vertical-align: top;
+  padding-top: 12px;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.swagger-ui .parameter__name,
+.swagger-ui .parameter__type,
+.swagger-ui .model-title {
+  word-break: break-word;
+}
+
+.swagger-ui .model-box {
+  overflow-x: auto;
+}
