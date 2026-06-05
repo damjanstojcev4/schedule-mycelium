@@ -31,6 +31,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 account.getId(),
                 account.getEmail(),
                 account.getPasswordHash(),
+                account.getRole(),
                 Collections.singletonList(authority)
         );
     }
@@ -41,6 +42,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         private final Long accountId;
         private final String username;
         private final String password;
+        private final Account.Role role;
         private final Collection<? extends GrantedAuthority> authorities;
 
         @Override
