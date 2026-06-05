@@ -1,10 +1,16 @@
 package com.damjan.scheduler_mycelium.domain.business.dto;
 
-public record BusinessSettingsResponseDTO(
-        Long id,
-        Long businessId,
-        Integer cancellationCutoffHours,
-        Integer slotIntervalMinutes
-) {
-}
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class BusinessSettingsResponseDTO {
+
+    private Long id;
+    private Long businessId;
+    private Integer cancellationCutoffHours;
+    private Integer slotIntervalMinutes;
+}

@@ -1,15 +1,20 @@
 package com.damjan.scheduler_mycelium.domain.staff.dto;
 
 import java.time.LocalTime;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public record UpdateStaffRequestDTO(
-        Long accountId,
-        String name,
-        String roleTitle,
-        LocalTime workStart,
-        LocalTime workEnd,
-        LocalTime breakStart,
-        LocalTime breakEnd
-) {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class UpdateStaffRequestDTO {
+
+    private Long accountId;
+    private String name;
+    private String roleTitle;
+    private LocalTime workStart;
+    private LocalTime workEnd;
+    private LocalTime breakStart;
+    private LocalTime breakEnd;
 }
-
