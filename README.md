@@ -208,4 +208,4 @@ mvn package
 
 ## License
 
-Private project — add a license if you plan to open-source or distribute.
+MIT License — see [LICENSE](scheduler-mycelium/LICENSE).
