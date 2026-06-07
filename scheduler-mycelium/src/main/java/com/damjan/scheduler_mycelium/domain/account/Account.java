@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "accounts")
@@ -13,6 +14,9 @@ public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -28,11 +32,15 @@ public class Account {
     private LocalDateTime createdAt;
 
     public enum Role {
-        CUSTOMER, BUSINESS_OWNER, STAFF
+        SUPER_ADMIN,
+        BUSINESS_OWNER,
+        STAFF,
+        CUSTOMER
     }
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        this.publicId = UUID.randomUUID();
+        this.createdAt = LocalDateTime.now();
     }
 }

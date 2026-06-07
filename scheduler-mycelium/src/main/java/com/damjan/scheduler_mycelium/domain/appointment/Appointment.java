@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -27,6 +28,9 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
+
     // ─── Relationships ───────────────────────────────────────────────────────
 
     // Tenant discriminator — every appointment belongs to one business
@@ -39,8 +43,12 @@ public class Appointment {
     private StaffMember staffMember;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id", nullable = true)
     private Customer customer;
+
+    private String guestName;
+    private String guestEmail;
+    private String guestPhone;
 
     // Kept for historical record even if the service is later deactivated
     @ManyToOne(fetch = FetchType.LAZY)
@@ -94,6 +102,7 @@ public class Appointment {
 
     @PrePersist
     protected void onCreate() {
+        this.publicId = UUID.randomUUID();
         this.createdAt = LocalDateTime.now();
     }
 }
