@@ -24,6 +24,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @Tag(name = "Businesses", description = "Create and manage businesses, settings, and closure dates. Public endpoints; JWT recommended for owner mutations.")
 @RestController
@@ -55,44 +56,44 @@ public class BusinessController {
         return ResponseEntity.ok(businessService.getAllBusinesses());
     }
 
-    @Operation(summary = "Get business by ID")
+    @Operation(summary = "Get business by public ID")
     @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BusinessResponseDTO.class)))
     @ApiResponse(responseCode = "404", description = "Business not found")
     @SecurityRequirements
-    @GetMapping("/{id}")
-    public ResponseEntity<BusinessResponseDTO> getBusinessById(
-            @Parameter(description = "Business ID") @PathVariable Long id) {
-        return ResponseEntity.ok(businessService.getBusinessById(id));
+    @GetMapping("/{publicId}")
+    public ResponseEntity<BusinessResponseDTO> getBusinessByPublicId(
+            @Parameter(description = "Business public ID") @PathVariable UUID publicId) {
+        return ResponseEntity.ok(businessService.getBusinessByPublicId(publicId));
     }
 
     @Operation(summary = "Update business settings", description = "Opening hours, slot duration, booking rules. Owner only.")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BusinessSettingsResponseDTO.class)))
-    @PutMapping("/{id}/settings")
+    @PutMapping("/{publicId}/settings")
     public ResponseEntity<BusinessSettingsResponseDTO> updateSettings(
-            @PathVariable Long id,
+            @PathVariable UUID publicId,
             @Valid @RequestBody BusinessSettingsRequestDTO request,
             Authentication auth) {
-        return ResponseEntity.ok(businessService.updateSettings(id, request, auth));
+        return ResponseEntity.ok(businessService.updateSettings(publicId, request, auth));
     }
 
     @Operation(summary = "Add a closure day", description = "Business-wide day off (e.g. holiday). Owner only.")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = BusinessClosureResponseDTO.class)))
-    @PostMapping("/{id}/closures")
+    @PostMapping("/{publicId}/closures")
     public ResponseEntity<BusinessClosureResponseDTO> addClosure(
-            @PathVariable Long id,
+            @PathVariable UUID publicId,
             @Valid @RequestBody BusinessClosureRequestDTO request,
             Authentication auth) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(businessService.addClosure(id, request, auth));
+        return ResponseEntity.status(HttpStatus.CREATED).body(businessService.addClosure(publicId, request, auth));
     }
 
     @Operation(summary = "List closure days for a business")
     @ApiResponse(responseCode = "200",
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = BusinessClosureResponseDTO.class))))
     @SecurityRequirements
-    @GetMapping("/{id}/closures")
-    public ResponseEntity<List<BusinessClosureResponseDTO>> getClosures(@PathVariable Long id) {
-        return ResponseEntity.ok(businessService.getClosures(id));
+    @GetMapping("/{publicId}/closures")
+    public ResponseEntity<List<BusinessClosureResponseDTO>> getClosures(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(businessService.getClosures(publicId));
     }
 }

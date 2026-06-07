@@ -21,10 +21,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
-@Tag(name = "Services", description = "Services offered by a business (name, duration, price). Nested under /api/businesses/{businessId}/services.")
+@Tag(name = "Services", description = "Services offered by a business (name, duration, price). Nested under /api/businesses/{publicId}/services.")
 @RestController
-@RequestMapping("/api/businesses/{businessId}/services")
+@RequestMapping("/api/businesses/{publicId}/services")
 @RequiredArgsConstructor
 public class ServiceController {
 
@@ -35,11 +36,11 @@ public class ServiceController {
     @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = ServiceResponseDTO.class)))
     @PostMapping
     public ResponseEntity<ServiceResponseDTO> createService(
-            @Parameter(description = "Business ID") @PathVariable Long businessId,
+            @Parameter(description = "Business public ID") @PathVariable UUID publicId,
             @Valid @RequestBody CreateServiceRequestDTO request,
             Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(serviceService.createService(businessId, request, auth));
+                .body(serviceService.createService(publicId, request, auth));
     }
 
     @Operation(summary = "List active services for a business")
@@ -47,31 +48,31 @@ public class ServiceController {
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = ServiceResponseDTO.class))))
     @SecurityRequirements
     @GetMapping
-    public ResponseEntity<List<ServiceResponseDTO>> getActiveServices(@PathVariable Long businessId) {
-        return ResponseEntity.ok(serviceService.getActiveServices(businessId));
+    public ResponseEntity<List<ServiceResponseDTO>> getActiveServices(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(serviceService.getActiveServices(publicId));
     }
 
     @Operation(summary = "Update a service")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ServiceResponseDTO.class)))
-    @PutMapping("/{serviceId}")
+    @PutMapping("/{servicePublicId}")
     public ResponseEntity<ServiceResponseDTO> updateService(
-            @PathVariable Long businessId,
-            @PathVariable Long serviceId,
+            @PathVariable UUID publicId,
+            @PathVariable UUID servicePublicId,
             @Valid @RequestBody UpdateServiceRequestDTO request,
             Authentication auth) {
-        return ResponseEntity.ok(serviceService.updateService(businessId, serviceId, request, auth));
+        return ResponseEntity.ok(serviceService.updateService(publicId, servicePublicId, request, auth));
     }
 
     @Operation(summary = "Deactivate a service", description = "Soft-delete; service no longer appears in active list.")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "204", description = "Deactivated")
-    @DeleteMapping("/{serviceId}")
+    @DeleteMapping("/{servicePublicId}")
     public ResponseEntity<Void> deactivateService(
-            @PathVariable Long businessId,
-            @PathVariable Long serviceId,
+            @PathVariable UUID publicId,
+            @PathVariable UUID servicePublicId,
             Authentication auth) {
-        serviceService.deactivateService(businessId, serviceId, auth);
+        serviceService.deactivateService(publicId, servicePublicId, auth);
         return ResponseEntity.noContent().build();
     }
 }

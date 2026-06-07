@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface ServiceRepository extends JpaRepository<Service, Long> {
@@ -13,4 +14,6 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     List<Service> findByBusinessIdAndIsActiveTrue(Long businessId);
 
     Optional<Service> findByIdAndBusinessId(Long id, Long businessId);
+
+    Optional<Service> findByPublicId(UUID publicId);
 }

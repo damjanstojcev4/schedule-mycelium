@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,14 +28,14 @@ public class StaffMemberService {
     private final TenantGuard tenantGuard;
 
     @Transactional
-    public StaffResponseDTO addStaff(Long businessId, CreateStaffRequestDTO request, Authentication auth) {
-        tenantGuard.assertOwner(businessId, auth);
+    public StaffResponseDTO addStaff(UUID businessPublicId, CreateStaffRequestDTO request, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
 
-        Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found with id: " + businessId));
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
 
-        Account account = accountRepository.findById(request.getAccountId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + request.getAccountId()));
+        Account account = accountRepository.findByPublicId(request.getAccountPublicId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with publicId: " + request.getAccountPublicId()));
 
         if (account.getRole() != Account.Role.STAFF) {
             throw new IllegalArgumentException("Account must have STAFF role to be added as staff member");
@@ -55,20 +56,26 @@ public class StaffMemberService {
         return mapToStaffResponse(staff);
     }
 
-    public List<StaffResponseDTO> getStaffByBusiness(Long businessId) {
-        return staffMemberRepository.findByBusinessId(businessId).stream()
+    public List<StaffResponseDTO> getStaffByBusiness(UUID businessPublicId) {
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
+
+        return staffMemberRepository.findByBusinessId(business.getId()).stream()
                 .map(this::mapToStaffResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public StaffResponseDTO updateStaff(Long businessId, Long staffId, UpdateStaffRequestDTO request, Authentication auth) {
-        tenantGuard.assertOwner(businessId, auth);
+    public StaffResponseDTO updateStaff(UUID businessPublicId, UUID staffPublicId, UpdateStaffRequestDTO request, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
 
-        StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with id: " + staffId));
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
 
-        if (!staff.getBusiness().getId().equals(businessId)) {
+        StaffMember staff = staffMemberRepository.findByPublicId(staffPublicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with publicId: " + staffPublicId));
+
+        if (!staff.getBusiness().getId().equals(business.getId())) {
             throw new IllegalArgumentException("Staff member does not belong to this business");
         }
 
@@ -85,13 +92,16 @@ public class StaffMemberService {
     }
 
     @Transactional
-    public void removeStaff(Long businessId, Long staffId, Authentication auth) {
-        tenantGuard.assertOwner(businessId, auth);
+    public void removeStaff(UUID businessPublicId, UUID staffPublicId, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
 
-        StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with id: " + staffId));
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
 
-        if (!staff.getBusiness().getId().equals(businessId)) {
+        StaffMember staff = staffMemberRepository.findByPublicId(staffPublicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with publicId: " + staffPublicId));
+
+        if (!staff.getBusiness().getId().equals(business.getId())) {
             throw new IllegalArgumentException("Staff member does not belong to this business");
         }
 
@@ -99,13 +109,16 @@ public class StaffMemberService {
     }
 
     @Transactional
-    public StaffDayOffResponseDTO addDayOff(Long businessId, Long staffId, StaffDayOffRequestDTO request, Authentication auth) {
-        tenantGuard.assertOwner(businessId, auth);
+    public StaffDayOffResponseDTO addDayOff(UUID businessPublicId, UUID staffPublicId, StaffDayOffRequestDTO request, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
 
-        StaffMember staff = staffMemberRepository.findById(staffId)
-                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with id: " + staffId));
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
 
-        if (!staff.getBusiness().getId().equals(businessId)) {
+        StaffMember staff = staffMemberRepository.findByPublicId(staffPublicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff member not found with publicId: " + staffPublicId));
+
+        if (!staff.getBusiness().getId().equals(business.getId())) {
             throw new IllegalArgumentException("Staff member does not belong to this business");
         }
 
@@ -117,29 +130,32 @@ public class StaffMemberService {
 
         return new StaffDayOffResponseDTO(
                 dayOff.getId(),
-                dayOff.getStaffMember().getId(),
+                staff.getPublicId(),
                 dayOff.getDayOff()
         );
     }
 
     @Transactional
-    public void removeDayOff(Long businessId, Long dayOffId, Authentication auth) {
-        tenantGuard.assertOwner(businessId, auth);
+    public void removeDayOff(UUID businessPublicId, Long dayOffId, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
+
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
 
         StaffDayOff dayOff = staffDayOffRepository.findById(dayOffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Day off not found with id: " + dayOffId));
 
-        if (!dayOff.getStaffMember().getBusiness().getId().equals(businessId)) {
+        if (!dayOff.getStaffMember().getBusiness().getId().equals(business.getId())) {
             throw new IllegalArgumentException("Staff member does not belong to this business");
         }
 
         staffDayOffRepository.delete(dayOff);
     }
 
-    private StaffResponseDTO mapToStaffResponse(StaffMember staff) {
+    public StaffResponseDTO mapToStaffResponse(StaffMember staff) {
         return new StaffResponseDTO(
-                staff.getId(),
-                staff.getAccount().getId(),
+                staff.getPublicId(),
+                staff.getAccount().getPublicId(),
                 staff.getName(),
                 staff.getRoleTitle(),
                 staff.getWorkStart(),

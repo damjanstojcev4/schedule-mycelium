@@ -1,18 +1,20 @@
 package com.damjan.scheduler_mycelium.domain.staff.dto;
 
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class StaffResponseDTO {
 
-    private Long id;
-    private Long accountId;
+    private UUID publicId;
+    private UUID accountPublicId;
     private String name;
     private String roleTitle;
     private LocalTime workStart;

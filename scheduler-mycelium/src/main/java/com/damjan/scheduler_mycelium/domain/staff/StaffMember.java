@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "staff_members")
@@ -16,6 +17,9 @@ public class StaffMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
 
     // Which business this staff member belongs to (tenant discriminator)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -50,6 +54,7 @@ public class StaffMember {
 
     @PrePersist
     protected void onCreate() {
+        this.publicId = UUID.randomUUID();
         this.createdAt = LocalDateTime.now();
     }
 

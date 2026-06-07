@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Tag(name = "Slots", description = "Public availability lookup before booking an appointment.")
 @RestController
@@ -37,11 +38,11 @@ public class SlotController {
     @ApiResponse(responseCode = "404", description = "Business, staff, or service not found")
     @GetMapping
     public ResponseEntity<AvailableSlotsResponseDTO> getAvailableSlots(
-            @Parameter(description = "Business ID", required = true) @RequestParam Long businessId,
-            @Parameter(description = "Staff member ID", required = true) @RequestParam Long staffId,
-            @Parameter(description = "Service ID (defines duration)", required = true) @RequestParam Long serviceId,
+            @Parameter(description = "Business public ID", required = true) @RequestParam UUID businessPublicId,
+            @Parameter(description = "Staff member public ID", required = true) @RequestParam UUID staffPublicId,
+            @Parameter(description = "Service public ID (defines duration)", required = true) @RequestParam UUID servicePublicId,
             @Parameter(description = "Date to check (ISO-8601, e.g. 2026-06-04)", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(slotAvailabilityService.getAvailableSlots(businessId, staffId, serviceId, date));
+        return ResponseEntity.ok(slotAvailabilityService.getAvailableSlots(businessPublicId, staffPublicId, servicePublicId, date));
     }
 }

@@ -4,13 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class BusinessSettingsResponseDTO {
 
-    private Long id;
-    private Long businessId;
+    private UUID businessPublicId;
     private Integer cancellationCutoffHours;
     private Integer slotIntervalMinutes;
 }

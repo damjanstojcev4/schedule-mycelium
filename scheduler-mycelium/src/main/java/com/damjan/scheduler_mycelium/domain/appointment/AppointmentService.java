@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
@@ -41,18 +42,18 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponseDTO bookAppointment(BookAppointmentRequestDTO request, Authentication auth) {
         Long accountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
-        
+
         Customer customer = customerRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
 
-        Service service = serviceRepository.findById(request.getServiceId())
+        Service service = serviceRepository.findByPublicId(request.getServicePublicId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
 
         if (!service.getIsActive()) {
             throw new IllegalArgumentException("Service is not active");
         }
 
-        StaffMember staff = staffMemberRepository.findById(request.getStaffMemberId())
+        StaffMember staff = staffMemberRepository.findByPublicId(request.getStaffPublicId())
                 .orElseThrow(() -> new ResourceNotFoundException("Staff member not found"));
 
         Business business = staff.getBusiness();
@@ -84,28 +85,84 @@ public class AppointmentService {
     }
 
     @Transactional
-    public void cancelAppointment(Long appointmentId, Authentication auth) {
+    public AppointmentResponseDTO bookGuestAppointment(
+            Business business,
+            Service service,
+            StaffMember staff,
+            LocalDateTime startTime,
+            String guestName,
+            String guestEmail,
+            String guestPhone,
+            String notes
+    ) {
+        if (!service.getIsActive()) {
+            throw new IllegalArgumentException("Service is not active");
+        }
+
+        if (!service.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Service does not belong to this business");
+        }
+
+        if (!staff.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Staff member does not belong to this business");
+        }
+
+        LocalDateTime endTime = startTime.plusMinutes(service.getDurationMinutes());
+
+        if (!slotAvailabilityService.isSlotAvailable(staff.getId(), startTime, endTime)) {
+            throw new SlotNotAvailableException("The requested slot is not available");
+        }
+
+        Appointment appointment = new Appointment();
+        appointment.setBusiness(business);
+        appointment.setStaffMember(staff);
+        appointment.setCustomer(null);
+        appointment.setGuestName(guestName);
+        appointment.setGuestEmail(guestEmail);
+        appointment.setGuestPhone(guestPhone);
+        appointment.setService(service);
+        appointment.setStartTime(startTime);
+        appointment.setEndTime(endTime);
+        appointment.setStatus(Appointment.Status.BOOKED);
+        appointment.setNotes(notes);
+
+        appointment = appointmentRepository.save(appointment);
+
+        return mapToAppointmentResponse(appointment);
+    }
+
+    @Transactional
+    public void cancelAppointment(UUID appointmentPublicId, Authentication auth) {
         UserDetailsServiceImpl.CustomUserDetails userDetails =
                 (UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal();
         Account.Role role = userDetails.getRole();
 
-        Appointment.CancelledBy cancelledBy = switch (role) {
-            case CUSTOMER -> Appointment.CancelledBy.CUSTOMER;
-            case STAFF -> Appointment.CancelledBy.STAFF;
-            case BUSINESS_OWNER -> Appointment.CancelledBy.BUSINESS_OWNER;
-        };
-
-        Appointment appointment = appointmentRepository.findById(appointmentId)
+        Appointment appointment = appointmentRepository.findByPublicId(appointmentPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
         if (appointment.getStatus() != Appointment.Status.BOOKED) {
             throw new IllegalArgumentException("Only booked appointments can be cancelled");
         }
 
+        if (role == Account.Role.SUPER_ADMIN) {
+            appointment.setStatus(Appointment.Status.CANCELLED);
+            appointment.setCancelledBy(Appointment.CancelledBy.BUSINESS_OWNER);
+            appointmentRepository.save(appointment);
+            return;
+        }
+
+        Appointment.CancelledBy cancelledBy = switch (role) {
+            case CUSTOMER -> Appointment.CancelledBy.CUSTOMER;
+            case STAFF -> Appointment.CancelledBy.STAFF;
+            case BUSINESS_OWNER -> Appointment.CancelledBy.BUSINESS_OWNER;
+            default -> throw new AccessDeniedException("Cannot cancel appointment");
+        };
+
         Long accountId = userDetails.getAccountId();
 
         if (cancelledBy == Appointment.CancelledBy.CUSTOMER) {
-            if (!appointment.getCustomer().getAccount().getId().equals(accountId)) {
+            if (appointment.getCustomer() == null
+                    || !appointment.getCustomer().getAccount().getId().equals(accountId)) {
                 throw new AccessDeniedException("You do not own this appointment");
             }
 
@@ -118,11 +175,13 @@ public class AppointmentService {
             }
         } else if (cancelledBy == Appointment.CancelledBy.STAFF || cancelledBy == Appointment.CancelledBy.BUSINESS_OWNER) {
             if (cancelledBy == Appointment.CancelledBy.BUSINESS_OWNER) {
-                tenantGuard.assertOwner(appointment.getBusiness().getId(), auth);
+                tenantGuard.assertOwner(appointment.getBusiness().getPublicId(), auth);
             } else {
-                tenantGuard.assertStaffBelongsToBusiness(appointment.getStaffMember().getId(), appointment.getBusiness().getId());
-                // Assuming staff member id matches the current staff member trying to cancel.
-                // Depending on requirements, we might need to check if the staff cancelling is actually the one assigned.
+                tenantGuard.assertStaffBelongsToBusiness(
+                        appointment.getStaffMember().getPublicId(),
+                        appointment.getBusiness().getPublicId(),
+                        auth
+                );
             }
         }
 
@@ -132,21 +191,30 @@ public class AppointmentService {
     }
 
     @Transactional
-    public void completeAppointment(Long appointmentId, Authentication auth) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
+    public void completeAppointment(UUID appointmentPublicId, Authentication auth) {
+        Appointment appointment = appointmentRepository.findByPublicId(appointmentPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
-        // Let's assume BUSINESS_OWNER or the STAFF assigned can complete it
-        boolean isOwner = false;
-        try {
-            tenantGuard.assertOwner(appointment.getBusiness().getId(), auth);
-            isOwner = true;
-        } catch (AccessDeniedException e) {
-            // Not owner
-        }
+        UserDetailsServiceImpl.CustomUserDetails userDetails =
+                (UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal();
+        Account.Role role = userDetails.getRole();
 
-        if (!isOwner) {
-            tenantGuard.assertStaffBelongsToBusiness(appointment.getStaffMember().getId(), appointment.getBusiness().getId());
+        if (role != Account.Role.SUPER_ADMIN) {
+            boolean isOwner = false;
+            try {
+                tenantGuard.assertOwner(appointment.getBusiness().getPublicId(), auth);
+                isOwner = true;
+            } catch (AccessDeniedException e) {
+                // Not owner
+            }
+
+            if (!isOwner) {
+                tenantGuard.assertStaffBelongsToBusiness(
+                        appointment.getStaffMember().getPublicId(),
+                        appointment.getBusiness().getPublicId(),
+                        auth
+                );
+            }
         }
 
         if (appointment.getStatus() != Appointment.Status.BOOKED) {
@@ -160,12 +228,14 @@ public class AppointmentService {
     public List<AppointmentResponseDTO> getMyAppointments(Authentication auth) {
         UserDetailsServiceImpl.CustomUserDetails userDetails = (UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal();
         Long accountId = userDetails.getAccountId();
-        
+
         String role = userDetails.getAuthorities().iterator().next().getAuthority();
 
         List<Appointment> appointments;
 
-        if (role.equals("ROLE_CUSTOMER")) {
+        if (role.equals("ROLE_SUPER_ADMIN")) {
+            appointments = appointmentRepository.findAll();
+        } else if (role.equals("ROLE_CUSTOMER")) {
             Customer customer = customerRepository.findByAccountId(accountId)
                     .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
             appointments = appointmentRepository.findByCustomerId(customer.getId());
@@ -174,11 +244,10 @@ public class AppointmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
             appointments = appointmentRepository.findByStaffMemberId(staff.getId());
         } else if (role.equals("ROLE_BUSINESS_OWNER")) {
-            // Find business for this owner
-            // This might need a change if an owner can have multiple businesses. Assuming one for now.
-            // But wait, the plan says "load by businessId". So we might need to find the business id from owner.
-            // Let's rely on finding all businesses by owner. For MVP, we'll fetch all.
-            throw new UnsupportedOperationException("Owner needs businessId to get appointments. Implement properly based on routing.");
+            // For now, return all appointments across their businesses, or just empty if not fully implemented
+            appointments = appointmentRepository.findAll().stream()
+                .filter(a -> a.getBusiness().getOwner().getId().equals(accountId))
+                .collect(Collectors.toList());
         } else {
             throw new AccessDeniedException("Unknown role");
         }
@@ -188,45 +257,64 @@ public class AppointmentService {
                 .collect(Collectors.toList());
     }
 
-    public AppointmentResponseDTO getAppointmentById(Long id, Authentication auth) {
-        Appointment appointment = appointmentRepository.findById(id)
+    public AppointmentResponseDTO getAppointmentByPublicId(UUID publicId, Authentication auth) {
+        Appointment appointment = appointmentRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
-        // Verify access based on role
         UserDetailsServiceImpl.CustomUserDetails userDetails = (UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal();
         Long accountId = userDetails.getAccountId();
-        String role = userDetails.getAuthorities().iterator().next().getAuthority();
+        Account.Role role = userDetails.getRole();
 
-        if (role.equals("ROLE_CUSTOMER")) {
-            if (!appointment.getCustomer().getAccount().getId().equals(accountId)) {
+        if (role == Account.Role.SUPER_ADMIN) {
+            return mapToAppointmentResponse(appointment);
+        }
+
+        if (role == Account.Role.CUSTOMER) {
+            if (appointment.getCustomer() == null
+                    || !appointment.getCustomer().getAccount().getId().equals(accountId)) {
                 throw new AccessDeniedException("Access denied");
             }
-        } else if (role.equals("ROLE_STAFF")) {
+        } else if (role == Account.Role.STAFF) {
             StaffMember staff = staffMemberRepository.findByAccountId(accountId)
                     .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
             if (!appointment.getStaffMember().getId().equals(staff.getId())) {
                 throw new AccessDeniedException("Access denied");
             }
-        } else if (role.equals("ROLE_BUSINESS_OWNER")) {
-            tenantGuard.assertOwner(appointment.getBusiness().getId(), auth);
+        } else if (role == Account.Role.BUSINESS_OWNER) {
+            tenantGuard.assertOwner(appointment.getBusiness().getPublicId(), auth);
         }
 
         return mapToAppointmentResponse(appointment);
     }
 
-    private AppointmentResponseDTO mapToAppointmentResponse(Appointment appointment) {
+    public List<AppointmentResponseDTO> getAllAppointments() {
+        return appointmentRepository.findAll().stream()
+                .map(this::mapToAppointmentResponse)
+                .collect(Collectors.toList());
+    }
+
+    public AppointmentResponseDTO mapToAppointmentResponse(Appointment appointment) {
+        String customerName = appointment.getCustomer() != null
+                ? appointment.getCustomer().getFullName()
+                : null;
+
         return new AppointmentResponseDTO(
-                appointment.getId(),
-                appointment.getBusiness().getId(),
+                appointment.getPublicId(),
+                appointment.getBusiness().getPublicId(),
                 appointment.getStaffMember().getName(),
-                appointment.getCustomer().getFullName(),
+                customerName,
+                appointment.getGuestName(),
+                appointment.getGuestEmail(),
+                appointment.getGuestPhone(),
                 appointment.getService().getName(),
                 appointment.getStartTime(),
                 appointment.getEndTime(),
                 appointment.getStatus().name(),
                 appointment.getCancelledBy() != null ? appointment.getCancelledBy().name() : null,
                 appointment.getNotes(),
-                appointment.getCreatedAt()
+                appointment.getCreatedAt(),
+                appointment.getBusiness().getName(),
+                appointment.getBusiness().getSlug()
         );
     }
 }

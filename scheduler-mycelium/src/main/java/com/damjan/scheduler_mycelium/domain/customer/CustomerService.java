@@ -17,31 +17,31 @@ public class CustomerService {
 
     public CustomerResponseDTO getMyProfile(Authentication auth) {
         Long accountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
-        
+
         Customer customer = customerRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
-                
+
         return mapToCustomerResponse(customer);
     }
 
     @Transactional
     public CustomerResponseDTO updateMyProfile(UpdateCustomerRequestDTO request, Authentication auth) {
         Long accountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
-        
+
         Customer customer = customerRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found"));
-                
+
         if (request.getFullName() != null) customer.setFullName(request.getFullName());
         if (request.getPhone() != null) customer.setPhone(request.getPhone());
-        
+
         customer = customerRepository.save(customer);
-        
+
         return mapToCustomerResponse(customer);
     }
-    
+
     private CustomerResponseDTO mapToCustomerResponse(Customer customer) {
         return new CustomerResponseDTO(
-                customer.getId(),
+                customer.getPublicId(),
                 customer.getFullName(),
                 customer.getPhone(),
                 customer.getCreatedAt()

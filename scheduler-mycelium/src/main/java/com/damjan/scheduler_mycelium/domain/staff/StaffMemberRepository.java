@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface StaffMemberRepository extends JpaRepository<StaffMember, Long> {
@@ -14,4 +15,7 @@ public interface StaffMemberRepository extends JpaRepository<StaffMember, Long> 
 
     List<StaffMember> findByBusinessIdOrderByName(Long businessId);
 
+    Optional<StaffMember> findByPublicId(UUID publicId);
+
+    Optional<StaffMember> findByBusinessIdAndAccountId(Long businessId, Long accountId);
 }

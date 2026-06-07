@@ -2,10 +2,12 @@ package com.damjan.scheduler_mycelium.domain.staff.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -13,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class CreateStaffRequestDTO {
 
     @NotNull
-    private Long accountId;
+    private UUID accountPublicId;
 
     @NotBlank
     private String name;

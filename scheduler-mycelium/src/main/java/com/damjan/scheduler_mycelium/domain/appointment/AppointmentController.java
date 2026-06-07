@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @Tag(name = "Appointments", description = "Book and manage appointments. All endpoints require JWT.")
 @RestController
@@ -51,29 +52,29 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getMyAppointments(auth));
     }
 
-    @Operation(summary = "Get appointment by ID")
+    @Operation(summary = "Get appointment by public ID")
     @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = AppointmentResponseDTO.class)))
     @ApiResponse(responseCode = "403", description = "Not allowed to view this appointment")
-    @GetMapping("/{id}")
-    public ResponseEntity<AppointmentResponseDTO> getAppointmentById(
-            @Parameter(description = "Appointment ID") @PathVariable Long id,
+    @GetMapping("/{publicId}")
+    public ResponseEntity<AppointmentResponseDTO> getAppointmentByPublicId(
+            @Parameter(description = "Appointment public ID") @PathVariable UUID publicId,
             Authentication auth) {
-        return ResponseEntity.ok(appointmentService.getAppointmentById(id, auth));
+        return ResponseEntity.ok(appointmentService.getAppointmentByPublicId(publicId, auth));
     }
 
     @Operation(summary = "Cancel appointment", description = "Customer, assigned staff, or business owner may cancel.")
     @ApiResponse(responseCode = "200", description = "Cancelled")
-    @PatchMapping("/{id}/cancel")
-    public ResponseEntity<Void> cancelAppointment(@PathVariable Long id, Authentication auth) {
-        appointmentService.cancelAppointment(id, auth);
+    @PatchMapping("/{publicId}/cancel")
+    public ResponseEntity<Void> cancelAppointment(@PathVariable UUID publicId, Authentication auth) {
+        appointmentService.cancelAppointment(publicId, auth);
         return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Complete appointment", description = "Staff or business owner marks appointment as completed.")
     @ApiResponse(responseCode = "200", description = "Completed")
-    @PatchMapping("/{id}/complete")
-    public ResponseEntity<Void> completeAppointment(@PathVariable Long id, Authentication auth) {
-        appointmentService.completeAppointment(id, auth);
+    @PatchMapping("/{publicId}/complete")
+    public ResponseEntity<Void> completeAppointment(@PathVariable UUID publicId, Authentication auth) {
+        appointmentService.completeAppointment(publicId, auth);
         return ResponseEntity.ok().build();
     }
 }

@@ -23,4 +23,6 @@ public class CreateBusinessRequestDTO {
     private String address;
 
     private String description;
+
+    private Boolean soloOperator = true;
 }

@@ -23,10 +23,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
-@Tag(name = "Staff", description = "Staff members and days off for a business. Nested under /api/businesses/{businessId}/staff.")
+@Tag(name = "Staff", description = "Staff members and days off for a business. Nested under /api/businesses/{publicId}/staff.")
 @RestController
-@RequestMapping("/api/businesses/{businessId}/staff")
+@RequestMapping("/api/businesses/{publicId}/staff")
 @RequiredArgsConstructor
 public class StaffMemberController {
 
@@ -37,11 +38,11 @@ public class StaffMemberController {
     @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = StaffResponseDTO.class)))
     @PostMapping
     public ResponseEntity<StaffResponseDTO> addStaff(
-            @PathVariable Long businessId,
+            @PathVariable UUID publicId,
             @Valid @RequestBody CreateStaffRequestDTO request,
             Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(staffMemberService.addStaff(businessId, request, auth));
+                .body(staffMemberService.addStaff(publicId, request, auth));
     }
 
     @Operation(summary = "List staff for a business")
@@ -49,57 +50,57 @@ public class StaffMemberController {
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = StaffResponseDTO.class))))
     @SecurityRequirements
     @GetMapping
-    public ResponseEntity<List<StaffResponseDTO>> getStaffByBusiness(@PathVariable Long businessId) {
-        return ResponseEntity.ok(staffMemberService.getStaffByBusiness(businessId));
+    public ResponseEntity<List<StaffResponseDTO>> getStaffByBusiness(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(staffMemberService.getStaffByBusiness(publicId));
     }
 
     @Operation(summary = "Update staff member")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = StaffResponseDTO.class)))
-    @PutMapping("/{staffId}")
+    @PutMapping("/{staffPublicId}")
     public ResponseEntity<StaffResponseDTO> updateStaff(
-            @PathVariable Long businessId,
-            @PathVariable Long staffId,
+            @PathVariable UUID publicId,
+            @PathVariable UUID staffPublicId,
             @Valid @RequestBody UpdateStaffRequestDTO request,
             Authentication auth) {
-        return ResponseEntity.ok(staffMemberService.updateStaff(businessId, staffId, request, auth));
+        return ResponseEntity.ok(staffMemberService.updateStaff(publicId, staffPublicId, request, auth));
     }
 
     @Operation(summary = "Remove staff member")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "204", description = "Removed")
-    @DeleteMapping("/{staffId}")
+    @DeleteMapping("/{staffPublicId}")
     public ResponseEntity<Void> removeStaff(
-            @PathVariable Long businessId,
-            @PathVariable Long staffId,
+            @PathVariable UUID publicId,
+            @PathVariable UUID staffPublicId,
             Authentication auth) {
-        staffMemberService.removeStaff(businessId, staffId, auth);
+        staffMemberService.removeStaff(publicId, staffPublicId, auth);
         return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Add staff day off", description = "Blocks availability for that staff member on the given date.")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "201", content = @Content(schema = @Schema(implementation = StaffDayOffResponseDTO.class)))
-    @PostMapping("/{staffId}/days-off")
+    @PostMapping("/{staffPublicId}/days-off")
     public ResponseEntity<StaffDayOffResponseDTO> addDayOff(
-            @PathVariable Long businessId,
-            @PathVariable Long staffId,
+            @PathVariable UUID publicId,
+            @PathVariable UUID staffPublicId,
             @Valid @RequestBody StaffDayOffRequestDTO request,
             Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(staffMemberService.addDayOff(businessId, staffId, request, auth));
+                .body(staffMemberService.addDayOff(publicId, staffPublicId, request, auth));
     }
 
     @Operation(summary = "Remove staff day off")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "204", description = "Removed")
-    @DeleteMapping("/{staffId}/days-off/{dayOffId}")
+    @DeleteMapping("/{staffPublicId}/days-off/{dayOffId}")
     public ResponseEntity<Void> removeDayOff(
-            @PathVariable Long businessId,
-            @Parameter(description = "Staff member ID (path segment for routing)") @PathVariable Long staffId,
+            @PathVariable UUID publicId,
+            @Parameter(description = "Staff member public ID (path segment for routing)") @PathVariable UUID staffPublicId,
             @PathVariable Long dayOffId,
             Authentication auth) {
-        staffMemberService.removeDayOff(businessId, dayOffId, auth);
+        staffMemberService.removeDayOff(publicId, dayOffId, auth);
         return ResponseEntity.noContent().build();
     }
 }

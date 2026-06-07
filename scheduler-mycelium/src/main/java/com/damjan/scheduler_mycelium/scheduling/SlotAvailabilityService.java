@@ -1,7 +1,6 @@
 package com.damjan.scheduler_mycelium.scheduling;
 
 import com.damjan.scheduler_mycelium.domain.appointment.AppointmentRepository;
-import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import com.damjan.scheduler_mycelium.domain.appointment.dto.AvailableSlotsResponseDTO;
 import com.damjan.scheduler_mycelium.domain.business.BusinessClosureRepository;
 import com.damjan.scheduler_mycelium.domain.business.BusinessSettings;
@@ -11,6 +10,7 @@ import com.damjan.scheduler_mycelium.domain.service.ServiceRepository;
 import com.damjan.scheduler_mycelium.domain.staff.StaffDayOffRepository;
 import com.damjan.scheduler_mycelium.domain.staff.StaffMember;
 import com.damjan.scheduler_mycelium.domain.staff.StaffMemberRepository;
+import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
@@ -30,20 +31,50 @@ public class SlotAvailabilityService {
     private final BusinessSettingsRepository businessSettingsRepository;
     private final ServiceRepository serviceRepository;
 
+    public AvailableSlotsResponseDTO getAvailableSlots(UUID businessPublicId, UUID staffPublicId, UUID servicePublicId, LocalDate date) {
+        StaffMember staff = staffMemberRepository.findByPublicId(staffPublicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+
+        Service service = serviceRepository.findByPublicId(servicePublicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+
+        if (!staff.getBusiness().getPublicId().equals(businessPublicId)) {
+            throw new IllegalArgumentException("Staff member does not belong to this business");
+        }
+
+        if (!service.getBusiness().getPublicId().equals(businessPublicId)) {
+            throw new IllegalArgumentException("Service does not belong to this business");
+        }
+
+        return getAvailableSlots(staff.getBusiness().getId(), staff.getId(), service.getId(), date);
+    }
+
     public AvailableSlotsResponseDTO getAvailableSlots(Long businessId, Long staffId, Long serviceId, LocalDate date) {
-        if (businessClosureRepository.existsByBusinessIdAndClosureDate(businessId, date)) {
-            return new AvailableSlotsResponseDTO(businessId, staffId, serviceId, date, List.of());
-        }
-
-        if (staffDayOffRepository.existsByStaffMemberIdAndDayOff(staffId, date)) {
-            return new AvailableSlotsResponseDTO(businessId, staffId, serviceId, date, List.of());
-        }
-
         StaffMember staff = staffMemberRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 
         Service service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+
+        if (businessClosureRepository.existsByBusinessIdAndClosureDate(businessId, date)) {
+            return new AvailableSlotsResponseDTO(
+                    staff.getBusiness().getPublicId(),
+                    staff.getPublicId(),
+                    service.getPublicId(),
+                    date,
+                    List.of()
+            );
+        }
+
+        if (staffDayOffRepository.existsByStaffMemberIdAndDayOff(staffId, date)) {
+            return new AvailableSlotsResponseDTO(
+                    staff.getBusiness().getPublicId(),
+                    staff.getPublicId(),
+                    service.getPublicId(),
+                    date,
+                    List.of()
+            );
+        }
 
         BusinessSettings settings = businessSettingsRepository.findByBusinessId(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business settings not found"));
@@ -67,10 +98,16 @@ public class SlotAvailabilityService {
                     availableSlots.add(currentSlot);
                 }
             }
-            currentSlot = currentSlot.plusMinutes(slotIntervalMinutes);
+            currentSlot = currentSlot.plusMinutes(durationMinutes);
         }
 
-        return new AvailableSlotsResponseDTO(businessId, staffId, serviceId, date, availableSlots);
+        return new AvailableSlotsResponseDTO(
+                staff.getBusiness().getPublicId(),
+                staff.getPublicId(),
+                service.getPublicId(),
+                date,
+                availableSlots
+        );
     }
 
     public boolean isSlotAvailable(Long staffId, LocalDateTime startTime, LocalDateTime endTime) {

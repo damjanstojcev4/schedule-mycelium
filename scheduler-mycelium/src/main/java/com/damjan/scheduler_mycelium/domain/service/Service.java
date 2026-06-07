@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "services")
@@ -15,6 +16,9 @@ public class Service {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
 
     // Which business offers this service (tenant discriminator)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -44,6 +48,7 @@ public class Service {
 
     @PrePersist
     protected void onCreate() {
+        this.publicId = UUID.randomUUID();
         this.createdAt = LocalDateTime.now();
     }
 }
