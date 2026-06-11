@@ -15,6 +15,7 @@ public class StaffResponseDTO {
 
     private UUID publicId;
     private UUID accountPublicId;
+    private String email;
     private String name;
     private String roleTitle;
     private LocalTime workStart;
@@ -22,4 +23,6 @@ public class StaffResponseDTO {
     private LocalTime breakStart;
     private LocalTime breakEnd;
     private LocalDateTime createdAt;
+    /** Non-null only when this call auto-created a new account. Show once and store safely. */
+    private String tempPassword;
 }

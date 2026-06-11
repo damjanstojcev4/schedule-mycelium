@@ -14,8 +14,8 @@ export default function DashboardSettingsPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const { auth } = useAuth();
-  const identifier = auth?.businessPublicId || slug;
 
+  const [businessPublicId, setBusinessPublicId] = useState<string | null>(auth?.businessPublicId || null);
   const [biz, setBiz] = useState<BusinessBookingPage | null>(null);
   const [settings, setSettings] = useState<BusinessSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,23 @@ export default function DashboardSettingsPage() {
   const [settingsError, setSettingsError] = useState('');
 
   useEffect(() => {
-    Promise.all([api.getBookingPage(slug), api.getSettings(identifier)])
+    if (!businessPublicId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(true);
+      api
+        .getBookingPage(slug)
+        .then((bizData) => {
+          setBusinessPublicId(bizData.publicId);
+        })
+        .catch((e: Error) => {
+          setError(e.message);
+          setLoading(false);
+        });
+      return;
+    }
+
+    setLoading(true);
+    Promise.all([api.getBookingPage(slug), api.getSettings(businessPublicId)])
       .then(([b, s]) => {
         setBiz(b);
         setName(b.name);
@@ -55,14 +71,15 @@ export default function DashboardSettingsPage() {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, businessPublicId]);
 
   async function handleSaveBiz() {
+    if (!businessPublicId) { setBizError('Business public ID is missing.'); return; }
     setSavingBiz(true);
     setBizError('');
     setBizSaved(false);
     try {
-      await api.updateBusiness(identifier, {
+      await api.updateBusiness(businessPublicId, {
         name: name.trim(),
         description: description.trim() || undefined,
         phone: phone.trim(),
@@ -80,6 +97,7 @@ export default function DashboardSettingsPage() {
   }
 
   async function handleSaveSettings() {
+    if (!businessPublicId) { setSettingsError('Business public ID is missing.'); return; }
     const cutoff = parseInt(cutoffHours, 10);
     const interval = parseInt(slotInterval, 10);
     if (isNaN(cutoff) || cutoff < 0) { setSettingsError('Cutoff hours must be 0 or more.'); return; }
@@ -88,7 +106,7 @@ export default function DashboardSettingsPage() {
     setSettingsError('');
     setSettingsSaved(false);
     try {
-      await api.updateSettings(identifier, {
+      await api.updateSettings(businessPublicId, {
         cancellationCutoffHours: cutoff,
         slotIntervalMinutes: interval,
       });

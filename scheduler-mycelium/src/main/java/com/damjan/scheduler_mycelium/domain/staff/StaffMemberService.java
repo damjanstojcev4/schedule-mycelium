@@ -10,9 +10,11 @@ import com.damjan.scheduler_mycelium.exception.ResourceNotFoundException;
 import com.damjan.scheduler_mycelium.security.TenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,6 +28,7 @@ public class StaffMemberService {
     private final BusinessRepository businessRepository;
     private final AccountRepository accountRepository;
     private final TenantGuard tenantGuard;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public StaffResponseDTO addStaff(UUID businessPublicId, CreateStaffRequestDTO request, Authentication auth) {
@@ -34,11 +37,26 @@ public class StaffMemberService {
         Business business = businessRepository.findByPublicId(businessPublicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
 
-        Account account = accountRepository.findByPublicId(request.getAccountPublicId())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with publicId: " + request.getAccountPublicId()));
+        String tempPassword = null;
+        Account account = accountRepository.findByEmail(request.getEmail()).orElse(null);
 
-        if (account.getRole() != Account.Role.STAFF) {
-            throw new IllegalArgumentException("Account must have STAFF role to be added as staff member");
+        if (account == null) {
+            // Auto-create a STAFF account with a random temporary password
+            tempPassword = generateTempPassword();
+            account = new Account();
+            account.setEmail(request.getEmail());
+            account.setPasswordHash(passwordEncoder.encode(tempPassword));
+            account.setRole(Account.Role.STAFF);
+            account = accountRepository.save(account);
+        } else if (account.getRole() != Account.Role.STAFF) {
+            throw new IllegalArgumentException(
+                "An account with email '" + request.getEmail() + "' already exists with role " +
+                account.getRole().name() + ". Only STAFF-role accounts can be added as staff members.");
+        }
+
+        // Prevent adding the same account to the same business twice
+        if (staffMemberRepository.findByBusinessIdAndAccountId(business.getId(), account.getId()).isPresent()) {
+            throw new IllegalArgumentException("This account is already a staff member at your business.");
         }
 
         StaffMember staff = new StaffMember();
@@ -53,7 +71,15 @@ public class StaffMemberService {
 
         staff = staffMemberRepository.save(staff);
 
-        return mapToStaffResponse(staff);
+        return mapToStaffResponse(staff, tempPassword);
+    }
+
+    private static String generateTempPassword() {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        SecureRandom rnd = new SecureRandom();
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        return sb.toString();
     }
 
     public List<StaffResponseDTO> getStaffByBusiness(UUID businessPublicId) {
@@ -88,7 +114,7 @@ public class StaffMemberService {
 
         staff = staffMemberRepository.save(staff);
 
-        return mapToStaffResponse(staff);
+        return mapToStaffResponse(staff, null);
     }
 
     @Transactional
@@ -153,16 +179,22 @@ public class StaffMemberService {
     }
 
     public StaffResponseDTO mapToStaffResponse(StaffMember staff) {
+        return mapToStaffResponse(staff, null);
+    }
+
+    public StaffResponseDTO mapToStaffResponse(StaffMember staff, String tempPassword) {
         return new StaffResponseDTO(
                 staff.getPublicId(),
                 staff.getAccount().getPublicId(),
+                staff.getAccount().getEmail(),
                 staff.getName(),
                 staff.getRoleTitle(),
                 staff.getWorkStart(),
                 staff.getWorkEnd(),
                 staff.getBreakStart(),
                 staff.getBreakEnd(),
-                staff.getCreatedAt()
+                staff.getCreatedAt(),
+                tempPassword
         );
     }
 }

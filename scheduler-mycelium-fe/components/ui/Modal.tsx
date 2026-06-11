@@ -45,7 +45,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-xl shadow-xl">
+      <div className="relative z-10 w-full max-w-lg bg-white rounded-xl shadow-xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
           <h2 id="modal-title" className="text-base font-semibold text-gray-900">

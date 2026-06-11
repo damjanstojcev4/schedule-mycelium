@@ -68,8 +68,8 @@ export default function AdminAccountsPage() {
       )}
 
       {!loading && filtered.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-gray-50">
               <tr>
                 {['Email', 'Role', 'Created'].map((h) => (

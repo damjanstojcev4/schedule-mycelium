@@ -48,6 +48,17 @@ export interface CreateBusinessRequest {
   soloOperator: boolean;
 }
 
+export interface AdminCreateBusinessRequest {
+  ownerEmail: string;
+  ownerPassword?: string;
+  name: string;
+  description?: string;
+  category: string;
+  phone: string;
+  address: string;
+  soloOperator: boolean;
+}
+
 export interface UpdateBusinessRequest {
   name?: string;
   description?: string;
@@ -87,16 +98,18 @@ export interface UpdateServiceRequest {
 
 export interface StaffMember {
   publicId: string;
+  email: string;
   name: string;
   roleTitle: string;
   workStart: string;
   workEnd: string;
   breakStart: string | null;
   breakEnd: string | null;
+  tempPassword: string | null;
 }
 
 export interface CreateStaffRequest {
-  accountId: number;
+  email: string;
   name: string;
   roleTitle: string;
   workStart: string;

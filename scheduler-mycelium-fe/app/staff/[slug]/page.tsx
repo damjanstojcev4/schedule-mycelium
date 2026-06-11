@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { getStoredAuth } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -24,6 +24,7 @@ export default function StaffSchedulePage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const router = useRouter();
+  const { auth, logout } = useAuth();
 
   const today = todayISO();
   const todayDate = new Date(today);
@@ -37,11 +38,11 @@ export default function StaffSchedulePage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const auth = getStoredAuth();
+    if (auth === null) return;
     if (!auth || auth.role !== 'STAFF') {
       router.replace('/login');
     }
-  }, [router]);
+  }, [auth, router]);
 
   useEffect(() => {
     void (async () => {
@@ -91,10 +92,21 @@ export default function StaffSchedulePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-5">
-        <div className="mx-auto max-w-4xl">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Staff Portal</p>
-          <h1 className="text-xl font-semibold text-gray-900 mt-1">My Schedule</h1>
+      <div className="bg-white border-b border-gray-200 px-4 py-4">
+        <div className="mx-auto max-w-4xl flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Staff Portal</p>
+            <h1 className="text-xl font-semibold text-gray-900 mt-0.5">My Schedule</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-xs font-medium text-gray-500">{auth?.email}</span>
+            <button
+              onClick={logout}
+              className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+            >
+              Log out
+            </button>
+          </div>
         </div>
       </div>
 

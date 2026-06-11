@@ -29,6 +29,21 @@ export function GuestForm({ onSubmit, loading }: GuestFormProps) {
   const [notes, setNotes] = useState(guestInfo.notes);
   const [errors, setErrors] = useState<FormErrors>({});
 
+  function handlePhoneChange(val: string) {
+    const clean = val.replace(/\D/g, '');
+    let masked = '';
+    if (clean.length > 0) {
+      masked += clean.substring(0, 3);
+    }
+    if (clean.length > 3) {
+      masked += '-' + clean.substring(3, 6);
+    }
+    if (clean.length > 6) {
+      masked += '-' + clean.substring(6, 9);
+    }
+    setPhone(masked);
+  }
+
   function validate(): boolean {
     const e: FormErrors = {};
     if (!fullName.trim()) e.fullName = 'Full name is required.';
@@ -86,9 +101,9 @@ export function GuestForm({ onSubmit, loading }: GuestFormProps) {
           label="Phone number"
           type="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => handlePhoneChange(e.target.value)}
           error={errors.phone}
-          placeholder="+389 7X XXX XXX"
+          placeholder="XXX-XXX-XXX"
           autoComplete="tel"
         />
 

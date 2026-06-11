@@ -63,8 +63,16 @@ function BookingFlow({ business }: { business: BusinessBookingPage }) {
     }
   }
 
+  const handleBack = () => {
+    if (business.soloOperator && step === 3) {
+      setStep(1);
+    } else {
+      setStep(step - 1);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-24">
       <BookingNavbar businessName={business.name} />
 
       {/* Business info strip */}
@@ -105,7 +113,11 @@ function BookingFlow({ business }: { business: BusinessBookingPage }) {
           <div className="flex-1">
             {/* Step indicator */}
             <div className="mb-8 flex justify-center">
-              <StepIndicator currentStep={step} soloOperator={business.soloOperator} />
+              <StepIndicator
+                currentStep={step}
+                soloOperator={business.soloOperator}
+                onStepClick={(num) => setStep(num)}
+              />
             </div>
 
             {/* Step content */}
@@ -124,11 +136,11 @@ function BookingFlow({ business }: { business: BusinessBookingPage }) {
                 </>
               )}
 
-              {/* Back navigation for steps 2–3 */}
-              {step > 1 && step < 4 && (
+              {/* Back navigation for steps 2–4 */}
+              {step > 1 && (
                 <button
                   type="button"
-                  onClick={() => setStep(step - 1)}
+                  onClick={handleBack}
                   className="mt-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

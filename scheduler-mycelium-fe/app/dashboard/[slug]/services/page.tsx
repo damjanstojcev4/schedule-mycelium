@@ -25,9 +25,10 @@ const emptyForm: ServiceFormState = { name: '', description: '', durationMinutes
 
 export default function DashboardServicesPage() {
   const params = useParams<{ slug: string }>();
+  const slug = params.slug;
   const { auth } = useAuth();
-  const identifier = auth?.businessPublicId || params.slug;
 
+  const [businessPublicId, setBusinessPublicId] = useState<string | null>(auth?.businessPublicId || null);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,12 +39,28 @@ export default function DashboardServicesPage() {
   const [formError, setFormError] = useState('');
 
   useEffect(() => {
+    if (!businessPublicId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(true);
+      api
+        .getBookingPage(slug)
+        .then((biz) => {
+          setBusinessPublicId(biz.publicId);
+        })
+        .catch((e: Error) => {
+          setError(e.message);
+          setLoading(false);
+        });
+      return;
+    }
+
+    setLoading(true);
     api
-      .getServices(identifier)
+      .getServices(businessPublicId)
       .then(setServices)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [identifier]);
+  }, [slug, businessPublicId]);
 
   function openAdd() {
     setEditingService(null);
@@ -75,6 +92,7 @@ export default function DashboardServicesPage() {
   }
 
   async function handleSave() {
+    if (!businessPublicId) { setFormError('Business public ID is missing.'); return; }
     const dur = parseInt(form.durationMinutes, 10);
     const price = parseInt(form.price, 10);
     if (!form.name.trim()) { setFormError('Name is required.'); return; }
@@ -91,10 +109,10 @@ export default function DashboardServicesPage() {
         price,
       };
       if (editingService) {
-        const updated = await api.updateService(identifier, editingService.publicId, body);
+        const updated = await api.updateService(businessPublicId, editingService.publicId, body);
         setServices((prev) => prev.map((s) => (s.publicId === editingService.publicId ? updated : s)));
       } else {
-        const created = await api.createService(identifier, body);
+        const created = await api.createService(businessPublicId, body);
         setServices((prev) => [...prev, created]);
       }
       closeModal();
@@ -106,9 +124,10 @@ export default function DashboardServicesPage() {
   }
 
   async function handleDeactivate(service: Service) {
+    if (!businessPublicId) return;
     if (!confirm(`Deactivate "${service.name}"? It will no longer appear in booking.`)) return;
     try {
-      await api.deactivateService(identifier, service.publicId);
+      await api.deactivateService(businessPublicId, service.publicId);
       setServices((prev) =>
         prev.map((s) => (s.publicId === service.publicId ? { ...s, isActive: false } : s)),
       );
@@ -154,7 +173,7 @@ export default function DashboardServicesPage() {
           {services.map((service) => (
             <div
               key={service.publicId}
-              className={`flex items-center gap-4 px-6 py-4 transition-opacity ${
+              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 transition-opacity ${
                 service.isActive ? '' : 'opacity-50'
               }`}
             >
@@ -177,7 +196,7 @@ export default function DashboardServicesPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 sm:justify-end">
                 <Button
                   id={`edit-service-${service.publicId}`}
                   variant="secondary"

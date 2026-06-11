@@ -14,6 +14,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.damjan.scheduler_mycelium.domain.appointment.AppointmentRepository;
+import com.damjan.scheduler_mycelium.domain.service.ServiceRepository;
+import com.damjan.scheduler_mycelium.domain.staff.StaffDayOffRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +32,10 @@ public class BusinessService {
     private final BusinessClosureRepository businessClosureRepository;
     private final AccountRepository accountRepository;
     private final StaffMemberRepository staffMemberRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final ServiceRepository serviceRepository;
+    private final StaffDayOffRepository staffDayOffRepository;
+    private final PasswordEncoder passwordEncoder;
     private final TenantGuard tenantGuard;
 
     @Transactional
@@ -84,6 +92,23 @@ public class BusinessService {
         return businessRepository.findAll().stream()
                 .map(this::mapToBusinessResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public BusinessSettingsResponseDTO getSettings(UUID businessPublicId, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
+
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
+
+        BusinessSettings settings = businessSettingsRepository.findByBusinessId(business.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Settings not found for business"));
+
+        return new BusinessSettingsResponseDTO(
+                business.getPublicId(),
+                settings.getCancellationCutoffHours(),
+                settings.getSlotIntervalMinutes()
+        );
     }
 
     @Transactional
@@ -170,5 +195,93 @@ public class BusinessService {
                 business.getSoloOperator(),
                 business.getCreatedAt()
         );
+    }
+
+    @Transactional
+    public BusinessResponseDTO createBusinessAccountForAdmin(AdminCreateBusinessRequestDTO request) {
+        if (accountRepository.existsByEmail(request.getOwnerEmail())) {
+            throw new IllegalArgumentException("Email is already taken");
+        }
+
+        // 1. Create owner account
+        Account owner = new Account();
+        owner.setEmail(request.getOwnerEmail());
+        owner.setPasswordHash(passwordEncoder.encode(request.getOwnerPassword()));
+        owner.setRole(Account.Role.BUSINESS_OWNER);
+        owner = accountRepository.save(owner);
+
+        // 2. Create business
+        boolean soloOperator = request.getSoloOperator() != null ? request.getSoloOperator() : true;
+
+        Business business = new Business();
+        business.setOwner(owner);
+        business.setName(request.getName());
+        business.setCategory(request.getCategory());
+        business.setPhone(request.getPhone());
+        business.setAddress(request.getAddress());
+        business.setDescription(request.getDescription());
+        business.setSoloOperator(soloOperator);
+        business.setSlug(generateSlug(request.getName()));
+
+        business = businessRepository.save(business);
+
+        // 3. Create settings
+        BusinessSettings settings = new BusinessSettings();
+        settings.setBusiness(business);
+        settings.setCancellationCutoffHours(24);
+        settings.setSlotIntervalMinutes(15);
+        businessSettingsRepository.save(settings);
+
+        if (soloOperator) {
+            StaffMember ownerAsStaff = new StaffMember();
+            ownerAsStaff.setBusiness(business);
+            ownerAsStaff.setAccount(owner);
+            ownerAsStaff.setName(owner.getEmail());
+            ownerAsStaff.setWorkStart(LocalTime.of(9, 0));
+            ownerAsStaff.setWorkEnd(LocalTime.of(17, 0));
+            staffMemberRepository.save(ownerAsStaff);
+        }
+
+        return mapToBusinessResponse(business);
+    }
+
+    @Transactional
+    public void deleteBusiness(UUID businessPublicId) {
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
+
+        Long businessId = business.getId();
+        Account owner = business.getOwner();
+
+        // 1. Delete appointments
+        appointmentRepository.deleteAll(appointmentRepository.findByBusinessId(businessId));
+
+        // 2. Delete staff days off and staff members
+        List<StaffMember> staffMembers = staffMemberRepository.findByBusinessId(businessId);
+        for (StaffMember staff : staffMembers) {
+            staffDayOffRepository.deleteAll(staffDayOffRepository.findByStaffMemberId(staff.getId()));
+        }
+        staffMemberRepository.deleteAll(staffMembers);
+
+        // 3. Delete services
+        serviceRepository.deleteAll(serviceRepository.findByBusinessId(businessId));
+
+        // 4. Delete closures
+        businessClosureRepository.deleteAll(businessClosureRepository.findByBusinessId(businessId));
+
+        // 5. Delete settings
+        businessSettingsRepository.findByBusinessId(businessId)
+                .ifPresent(businessSettingsRepository::delete);
+
+        // 6. Delete business
+        businessRepository.delete(business);
+
+        // 7. Delete staff accounts (if any) and owner account
+        for (StaffMember staff : staffMembers) {
+            accountRepository.delete(staff.getAccount());
+        }
+        if (owner != null) {
+            accountRepository.delete(owner);
+        }
     }
 }

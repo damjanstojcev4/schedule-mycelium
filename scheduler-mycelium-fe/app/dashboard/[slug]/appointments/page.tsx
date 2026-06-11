@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
@@ -13,8 +12,6 @@ type StatusFilter = 'ALL' | 'BOOKED' | 'COMPLETED' | 'CANCELLED';
 const FILTERS: StatusFilter[] = ['ALL', 'BOOKED', 'COMPLETED', 'CANCELLED'];
 
 export default function DashboardAppointmentsPage() {
-  const params = useParams<{ slug: string }>();
-
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -70,7 +67,7 @@ export default function DashboardAppointmentsPage() {
       <PageHeader title="Appointments" description="Manage all bookings for your business." />
 
       {/* Status filter tabs */}
-      <div className="mb-5 flex gap-1 rounded-lg bg-gray-100 p-1 w-fit">
+      <div className="mb-5 flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1 w-fit">
         {FILTERS.map((f) => (
           <button
             key={f}

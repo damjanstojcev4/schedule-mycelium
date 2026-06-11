@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Business } from '@/types/api';
 
 function getCategoryIcon() {
@@ -16,10 +17,17 @@ interface BusinessCardProps {
 export function BusinessCard({ business }: BusinessCardProps) {
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-      {/* Cover Gradient */}
-      <div className="h-24 w-full bg-gradient-to-br from-gray-100 to-gray-200 relative">
+      {/* Cover Image */}
+      <div className="h-24 w-full relative">
+        <Image
+          src="/images/business_cover.png"
+          alt="Business Cover"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
         {/* Avatar overlapping */}
-        <div className="absolute -bottom-6 left-5 flex h-14 w-14 items-center justify-center rounded-xl border-4 border-white bg-gray-50 shadow-sm">
+        <div className="absolute -bottom-6 left-5 flex h-14 w-14 items-center justify-center rounded-xl border-4 border-white bg-gray-50 shadow-sm z-10">
           {getCategoryIcon()}
         </div>
       </div>

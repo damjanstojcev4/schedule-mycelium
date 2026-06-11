@@ -17,6 +17,7 @@ import com.damjan.scheduler_mycelium.exception.SlotNotAvailableException;
 import com.damjan.scheduler_mycelium.scheduling.SlotAvailabilityService;
 import com.damjan.scheduler_mycelium.security.TenantGuard;
 import com.damjan.scheduler_mycelium.security.UserDetailsServiceImpl;
+import com.damjan.scheduler_mycelium.webhook.WebhookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -38,6 +39,7 @@ public class AppointmentService {
     private final BusinessSettingsRepository businessSettingsRepository;
     private final SlotAvailabilityService slotAvailabilityService;
     private final TenantGuard tenantGuard;
+    private final WebhookService webhookService;
 
     @Transactional
     public AppointmentResponseDTO bookAppointment(BookAppointmentRequestDTO request, Authentication auth) {
@@ -79,9 +81,9 @@ public class AppointmentService {
         appointment.setStatus(Appointment.Status.BOOKED);
         appointment.setNotes(request.getNotes());
 
-        appointment = appointmentRepository.save(appointment);
-
-        return mapToAppointmentResponse(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        webhookService.sendBookingConfirmation(saved);
+        return mapToAppointmentResponse(saved);
     }
 
     @Transactional
@@ -126,9 +128,9 @@ public class AppointmentService {
         appointment.setStatus(Appointment.Status.BOOKED);
         appointment.setNotes(notes);
 
-        appointment = appointmentRepository.save(appointment);
-
-        return mapToAppointmentResponse(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        webhookService.sendBookingConfirmation(saved);
+        return mapToAppointmentResponse(saved);
     }
 
     @Transactional
@@ -147,7 +149,8 @@ public class AppointmentService {
         if (role == Account.Role.SUPER_ADMIN) {
             appointment.setStatus(Appointment.Status.CANCELLED);
             appointment.setCancelledBy(Appointment.CancelledBy.BUSINESS_OWNER);
-            appointmentRepository.save(appointment);
+            Appointment saved = appointmentRepository.save(appointment);
+            webhookService.sendCancellationNotification(saved);
             return;
         }
 
@@ -187,7 +190,8 @@ public class AppointmentService {
 
         appointment.setStatus(Appointment.Status.CANCELLED);
         appointment.setCancelledBy(cancelledBy);
-        appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        webhookService.sendCancellationNotification(saved);
     }
 
     @Transactional

@@ -66,6 +66,18 @@ public class BusinessController {
         return ResponseEntity.ok(businessService.getBusinessByPublicId(publicId));
     }
 
+    @Operation(summary = "Get business settings", description = "Opening hours, slot duration, booking rules. Owner only.")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BusinessSettingsResponseDTO.class)))
+    @ApiResponse(responseCode = "403", description = "Access denied")
+    @ApiResponse(responseCode = "404", description = "Business or settings not found")
+    @GetMapping("/{publicId}/settings")
+    public ResponseEntity<BusinessSettingsResponseDTO> getSettings(
+            @PathVariable UUID publicId,
+            Authentication auth) {
+        return ResponseEntity.ok(businessService.getSettings(publicId, auth));
+    }
+
     @Operation(summary = "Update business settings", description = "Opening hours, slot duration, booking rules. Owner only.")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = BusinessSettingsResponseDTO.class)))

@@ -55,6 +55,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const slug = params.slug;
 
   const [soloOperator, setSoloOperator] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -72,7 +73,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.replace('/login');
       return;
     }
-  }, [auth, router]);
+    if (auth.slug && auth.slug !== slug) {
+      router.replace(`/dashboard/${auth.slug}`);
+      return;
+    }
+  }, [auth, slug, router]);
 
   if (!auth || auth.role !== 'BUSINESS_OWNER') return null;
 
@@ -86,17 +91,39 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { href: `/dashboard/${slug}/settings`, label: 'Settings', icon: <CogIcon /> },
   ];
 
+
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 flex-col lg:flex-row">
+      {/* Mobile Header Bar */}
+      <header className="lg:hidden flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 h-16 w-full z-30">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="text-gray-500 hover:text-gray-900 focus:outline-none"
+            aria-label="Open sidebar"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="text-base font-bold text-gray-900 capitalize">{slug} Panel</span>
+        </div>
+        <span className="text-xs font-semibold text-gray-500">Mycelium</span>
+      </header>
+
       <Sidebar
         links={navLinks}
         businessName={slug}
         slug={slug}
         email={auth.email}
         onLogout={logout}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
+      <main className="flex-1 overflow-y-auto w-full">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">{children}</div>
       </main>
     </div>
   );

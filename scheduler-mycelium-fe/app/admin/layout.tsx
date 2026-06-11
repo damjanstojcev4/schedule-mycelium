@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +39,7 @@ const ADMIN_LINKS = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { auth, logout } = useAuth();
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (auth === null) return; // still loading
@@ -50,14 +51,58 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (!auth || auth.role !== 'SUPER_ADMIN') return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 flex-col lg:flex-row">
+      {/* Mobile Header Bar */}
+      <header className="lg:hidden flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 h-16 w-full z-30">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="text-gray-500 hover:text-gray-900 focus:outline-none"
+            aria-label="Open sidebar"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="text-base font-bold text-gray-900">Admin Panel</span>
+        </div>
+        <span className="text-xs font-semibold text-gray-500">Mycelium</span>
+      </header>
+
+      {/* Sidebar Backdrop for Mobile */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity lg:hidden"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="flex h-full w-60 flex-col border-r border-gray-200 bg-white">
-        <div className="border-b border-gray-200 px-6 py-5">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-            Scheduler Mycelium
-          </p>
-          <h1 className="mt-1 text-base font-semibold text-gray-900">Admin Panel</h1>
+      <aside
+        className={[
+          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:static lg:translate-x-0',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        ].join(' ')}
+      >
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              Scheduler Mycelium
+            </p>
+            <h1 className="mt-1 text-base font-bold text-gray-900">Admin Panel</h1>
+          </div>
+          {/* Close button for Mobile */}
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(false)}
+            className="text-gray-400 hover:text-gray-600 lg:hidden rounded-full p-1 hover:bg-gray-100 transition-colors"
+            aria-label="Close sidebar"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4" aria-label="Admin navigation">
@@ -66,6 +111,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <li key={link.href}>
                 <Link
                   href={link.href}
+                  onClick={() => setIsSidebarOpen(false)}
                   className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                 >
                   <span className="text-gray-400">{link.icon}</span>
@@ -93,8 +139,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
+      <main className="flex-1 overflow-y-auto w-full">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">{children}</div>
       </main>
     </div>
   );

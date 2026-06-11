@@ -11,6 +11,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import com.damjan.scheduler_mycelium.domain.business.dto.AdminCreateBusinessRequestDTO;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +41,19 @@ public class AdminController {
     @GetMapping("/businesses/{publicId}")
     public ResponseEntity<BusinessResponseDTO> getBusinessByPublicId(@PathVariable UUID publicId) {
         return ResponseEntity.ok(businessService.getBusinessByPublicId(publicId));
+    }
+
+    @Operation(summary = "Create a business and owner account")
+    @PostMapping("/businesses")
+    public ResponseEntity<BusinessResponseDTO> createBusinessAccount(@Valid @RequestBody AdminCreateBusinessRequestDTO request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(businessService.createBusinessAccountForAdmin(request));
+    }
+
+    @Operation(summary = "Delete business and clean up its associated resources")
+    @DeleteMapping("/businesses/{publicId}")
+    public ResponseEntity<Void> deleteBusiness(@PathVariable UUID publicId) {
+        businessService.deleteBusiness(publicId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "List all accounts")

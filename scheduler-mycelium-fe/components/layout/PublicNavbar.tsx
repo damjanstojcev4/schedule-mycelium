@@ -17,32 +17,35 @@ export function PublicNavbar() {
           >
             Login
           </Link>
-          <Link
-            href="/register?role=BUSINESS_OWNER"
-            id="nav-for-business-link"
-            className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black transition-colors shadow-sm hover:shadow-md"
-          >
-            For Business
-          </Link>
         </div>
       );
     }
 
     let navLink = null;
-    if (auth.role === 'BUSINESS_OWNER' && auth.slug) {
+    if (auth.role === 'SUPER_ADMIN') {
       navLink = (
         <Link
-          href={`/dashboard/${auth.slug}`}
+          href="/admin"
+          id="nav-admin-link"
+          className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black transition-colors shadow-sm hover:shadow-md"
+        >
+          Admin Dashboard
+        </Link>
+      );
+    } else if (auth.role === 'BUSINESS_OWNER') {
+      navLink = (
+        <Link
+          href={`/dashboard/${auth.slug || ''}`}
           id="nav-dashboard-link"
           className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black transition-colors shadow-sm hover:shadow-md"
         >
           Dashboard
         </Link>
       );
-    } else if (auth.role === 'STAFF' && auth.slug) {
+    } else if (auth.role === 'STAFF') {
       navLink = (
         <Link
-          href={`/staff/${auth.slug}`}
+          href={`/staff/${auth.slug || ''}`}
           id="nav-schedule-link"
           className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black transition-colors shadow-sm hover:shadow-md"
         >

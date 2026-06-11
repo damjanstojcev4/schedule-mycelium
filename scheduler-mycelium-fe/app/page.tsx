@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import Image from 'next/image';
 import { api } from '@/lib/api';
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { BusinessCard } from '@/components/ui/BusinessCard';
@@ -60,43 +61,47 @@ export default function LandingPage() {
         {/* Subtle radial gradient background */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-100/80 via-white to-white pointer-events-none" />
         
-        <div className="relative mx-auto max-w-4xl px-4 text-center">
-          <h1 className="text-5xl font-extrabold tracking-tighter text-gray-900 sm:text-7xl">
-            Book appointments with<br />
-            <span className="text-gray-800">local businesses</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg tracking-tight text-gray-500 sm:text-xl">
-            No account needed. Pick a service, pick a time, done.
-          </p>
+        <div className="relative mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-center">
+            <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
+              <h1 className="text-5xl font-extrabold tracking-tighter text-gray-900 sm:text-7xl">
+                Book appointments with<br />
+                <span className="text-gray-800">local businesses</span>
+              </h1>
+              <p className="mt-6 text-lg tracking-tight text-gray-500 sm:text-xl">
+                No account needed. Pick a service, pick a time, done.
+              </p>
 
-          {/* Search bar */}
-          <div className="relative mx-auto mt-10 max-w-xl">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              {/* Search bar */}
+              <div className="relative mt-10 max-w-xl sm:mx-auto lg:mx-0">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  id="business-search"
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by business name or category…"
+                  className="w-full rounded-full border border-gray-200/80 bg-white/80 py-4 pl-12 pr-4 text-base text-gray-900 shadow-xl shadow-gray-200/40 backdrop-blur-md placeholder:text-gray-400 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all"
+                />
+              </div>
             </div>
-            <input
-              id="business-search"
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by business name or category…"
-              className="w-full rounded-full border border-gray-200/80 bg-white/80 py-4 pl-12 pr-4 text-base text-gray-900 shadow-xl shadow-gray-200/40 backdrop-blur-md placeholder:text-gray-400 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all"
-            />
+            <div className="mt-16 sm:mt-24 lg:col-span-6 lg:mt-0">
+              <div className="relative mx-auto w-full max-w-lg lg:max-w-none rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
+                <Image
+                  src="/images/hero_abstract.png"
+                  alt="Premium abstract artwork"
+                  width={800}
+                  height={800}
+                  priority
+                  className="w-full object-cover aspect-square"
+                />
+              </div>
+            </div>
           </div>
-
-          {/* Business owner CTA */}
-          <p className="mt-8 text-sm font-medium text-gray-400">
-            Are you a business owner?{' '}
-            <a
-              href="/register?role=BUSINESS_OWNER"
-              id="hero-get-started-link"
-              className="text-gray-900 hover:text-black hover:underline"
-            >
-              Get started free →
-            </a>
-          </p>
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 import { clearToken, getToken } from '@/lib/auth';
 import type {
   Account,
+  AdminCreateBusinessRequest,
   Appointment,
   AuthResponse,
   AvailableSlots,
@@ -218,6 +219,17 @@ export const api = {
 
   adminGetBusinesses: () =>
     request<Business[]>('/api/admin/businesses'),
+
+  adminCreateBusiness: (body: AdminCreateBusinessRequest) =>
+    request<Business>('/api/admin/businesses', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  adminDeleteBusiness: (publicId: string) =>
+    request<void>(`/api/admin/businesses/${publicId}`, {
+      method: 'DELETE',
+    }),
 
   adminGetAccounts: () =>
     request<Account[]>('/api/admin/accounts'),

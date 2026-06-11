@@ -37,7 +37,7 @@ export default function AdminAppointmentsPage() {
       <PageHeader title="All Appointments" description={`${appointments.length} total across all businesses`} />
 
       {/* Filter */}
-      <div className="mb-5 flex gap-1 rounded-lg bg-gray-100 p-1 w-fit">
+      <div className="mb-5 flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1 w-fit">
         {STATUS_FILTERS.map((f) => (
           <button
             key={f}
