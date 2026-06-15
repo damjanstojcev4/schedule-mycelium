@@ -25,13 +25,10 @@ public class TenantGuard {
         }
 
         Long accountId = extractAccountId(auth);
-        Long businessId = businessRepository.findByPublicId(businessPublicId)
-                .map(b -> b.getId())
+        com.damjan.scheduler_mycelium.domain.business.Business business = businessRepository.findByPublicId(businessPublicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
 
-        boolean isOwner = businessRepository.existsByIdAndOwnerId(businessId, accountId);
-
-        if (!isOwner) {
+        if (!business.getOwner().getId().equals(accountId)) {
             throw new AccessDeniedException("You do not have permission to access this business.");
         }
     }

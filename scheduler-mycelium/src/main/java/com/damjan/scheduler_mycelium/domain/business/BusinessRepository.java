@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface BusinessRepository extends JpaRepository<Business, Long> {
     List<Business> findByOwnerId(Long ownerId);
 
-    boolean existsByIdAndOwnerId(Long businessId, Long ownerId);
+
 
     Optional<Business> findByPublicId(UUID publicId);
 
