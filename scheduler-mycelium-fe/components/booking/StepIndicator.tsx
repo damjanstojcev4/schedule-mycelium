@@ -1,64 +1,54 @@
-const STEPS = [
-  { label: 'Service', number: 1 },
-  { label: 'Staff', number: 2 },
-  { label: 'Time', number: 3 },
-  { label: 'Details', number: 4 },
-];
-
 interface StepIndicatorProps {
   currentStep: number;
   soloOperator: boolean;
   onStepClick?: (stepNumber: number) => void;
+  totalSteps: number;
+  currentStepIndex: number;
 }
 
-export function StepIndicator({ currentStep, soloOperator, onStepClick }: StepIndicatorProps) {
-  const visibleSteps = soloOperator ? STEPS.filter((s) => s.number !== 2) : STEPS;
+export function StepIndicator({ currentStep, soloOperator, onStepClick, totalSteps, currentStepIndex }: StepIndicatorProps) {
+  const steps = soloOperator
+    ? [
+        { number: 1, label: 'Service' },
+        { number: 3, label: 'Time' },
+        { number: 4, label: 'Details' },
+      ]
+    : [
+        { number: 1, label: 'Service' },
+        { number: 2, label: 'Staff' },
+        { number: 3, label: 'Time' },
+        { number: 4, label: 'Details' },
+      ];
 
   return (
-    <div className="flex items-center gap-0">
-      {visibleSteps.map((step, idx) => {
-        const isCompleted = currentStep > step.number;
-        const isActive = currentStep === step.number;
-        const isClickable = step.number < currentStep;
-
-        return (
-          <div key={step.number} className="flex items-center">
+    <div className="flex items-center gap-2">
+      {/* Thin segmented progress bar */}
+      <div className="flex-1 flex gap-1">
+        {steps.map((step) => {
+          const isDone = currentStep > step.number;
+          const isActive = currentStep === step.number;
+          const isClickable = step.number < currentStep;
+          return (
             <button
+              key={step.number}
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && onStepClick?.(step.number)}
-              className={`flex flex-col items-center focus:outline-none ${
-                isClickable ? 'cursor-pointer group' : 'cursor-default'
-              }`}
-            >
-              <div
-                className={[
-                  'h-3 w-3 rounded-full transition-all duration-500',
-                  isCompleted
-                    ? 'bg-gray-900 scale-100 group-hover:scale-125'
-                    : isActive
-                    ? 'bg-gray-900 ring-4 ring-gray-100 scale-125'
-                    : 'bg-gray-200 scale-100',
-                ].join(' ')}
-              />
-              <span
-                className={`mt-1 text-xs font-medium transition-colors ${
-                  isActive ? 'text-gray-900' : isCompleted ? 'text-gray-400 group-hover:text-gray-900' : 'text-gray-400'
-                }`}
-              >
-                {step.label}
-              </span>
-            </button>
-            {idx < visibleSteps.length - 1 && (
-              <div
-                className={`mb-5 h-[2px] w-6 sm:w-20 mx-1 sm:mx-2 transition-all duration-500 rounded-full ${
-                  currentStep > step.number ? 'bg-gray-900' : 'bg-gray-200'
-                }`}
-              />
-            )}
-          </div>
-        );
-      })}
+              className={[
+                'flex-1 h-1 rounded-full transition-all duration-500 ease-out',
+                isDone || isActive ? 'bg-zinc-900' : 'bg-zinc-200',
+                isClickable ? 'cursor-pointer hover:bg-zinc-700' : 'cursor-default',
+              ].join(' ')}
+              aria-label={`Step ${step.number}: ${step.label}`}
+            />
+          );
+        })}
+      </div>
+
+      {/* Step count */}
+      <span className="text-xs font-semibold text-zinc-400 shrink-0 tabular-nums">
+        {currentStepIndex}/{totalSteps}
+      </span>
     </div>
   );
 }

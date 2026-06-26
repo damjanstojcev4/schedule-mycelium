@@ -12,11 +12,11 @@ import { formatDate } from '@/lib/format';
 type RoleFilter = 'ALL' | 'SUPER_ADMIN' | 'BUSINESS_OWNER' | 'STAFF' | 'CUSTOMER';
 const ROLES: RoleFilter[] = ['ALL', 'SUPER_ADMIN', 'BUSINESS_OWNER', 'STAFF', 'CUSTOMER'];
 
-const roleBadgeVariant: Record<string, 'blue' | 'green' | 'yellow' | 'red' | 'gray'> = {
+const roleBadgeVariant: Record<string, 'blue' | 'green' | 'yellow' | 'red' | 'default'> = {
   SUPER_ADMIN: 'red',
   BUSINESS_OWNER: 'blue',
   STAFF: 'green',
-  CUSTOMER: 'gray',
+  CUSTOMER: 'default',
 };
 
 export default function AdminAccountsPage() {
@@ -86,7 +86,7 @@ export default function AdminAccountsPage() {
                   <td className="px-5 py-3.5">
                     <TextBadge
                       label={acc.role.replace('_', ' ')}
-                      variant={roleBadgeVariant[acc.role] ?? 'gray'}
+                      variant={roleBadgeVariant[acc.role] ?? 'default'}
                     />
                   </td>
                   <td className="px-5 py-3.5 text-gray-400 text-xs">{formatDate(acc.createdAt)}</td>

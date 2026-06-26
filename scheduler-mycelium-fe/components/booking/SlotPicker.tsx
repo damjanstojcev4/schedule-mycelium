@@ -10,7 +10,8 @@ const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
-const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 interface SlotPickerProps {
   slug: string;
@@ -28,6 +29,10 @@ function toISO(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+function parseHour(time: string): number {
+  return parseInt(time.split(':')[0], 10);
+}
+
 export function SlotPicker({ slug }: SlotPickerProps) {
   const { selectedService, selectedStaff, selectedSlot, setSelectedSlot, nextStep } = useBooking();
 
@@ -43,7 +48,6 @@ export function SlotPicker({ slug }: SlotPickerProps) {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState('');
 
-  // Fetch slots when date changes
   useEffect(() => {
     if (!selectedDate || !selectedService) return;
     void (async () => {
@@ -57,7 +61,7 @@ export function SlotPicker({ slug }: SlotPickerProps) {
           selectedDate,
           selectedStaff?.publicId,
         );
-      setSlots(result.availableSlots.map((t) => t.slice(0, 5)));
+        setSlots(result.availableSlots.map((t) => t.slice(0, 5)));
       } catch (e) {
         setSlotsError(e instanceof Error ? e.message : 'Failed to load slots.');
       } finally {
@@ -75,7 +79,7 @@ export function SlotPicker({ slug }: SlotPickerProps) {
   function handleSlotSelect(time: string) {
     if (!selectedDate) return;
     setSelectedSlot({ date: selectedDate, time });
-    nextStep();
+    setTimeout(() => nextStep(), 150);
   }
 
   function prevMonth() {
@@ -95,135 +99,193 @@ export function SlotPicker({ slug }: SlotPickerProps) {
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
 
+  // Group slots by AM / PM
+  const amSlots = slots.filter((t) => parseHour(t) < 12);
+  const pmSlots = slots.filter((t) => parseHour(t) >= 12);
+
+  const selectedDateFormatted = selectedDate
+    ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long',
+      })
+    : null;
+
   return (
     <div>
-      <h2 className="mb-4 text-base font-semibold text-gray-900">Pick a date & time</h2>
-
       {/* Calendar */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="bg-white rounded-3xl border border-zinc-200 overflow-hidden shadow-sm">
         {/* Month nav */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
           <button
             type="button"
             id="cal-prev-month"
             onClick={prevMonth}
-            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors active:scale-95"
             aria-label="Previous month"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="text-sm font-semibold text-gray-900">
+          <span className="text-base font-bold text-zinc-900">
             {MONTHS[viewMonth]} {viewYear}
           </span>
           <button
             type="button"
             id="cal-next-month"
             onClick={nextMonth}
-            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 transition-colors active:scale-95"
             aria-label="Next month"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
 
-        {/* Day headers */}
-        <div className="mb-1 grid grid-cols-7 text-center">
-          {DAY_LABELS.map((d) => (
-            <div key={d} className="text-xs font-medium text-gray-400 py-1">{d}</div>
-          ))}
-        </div>
+        {/* Calendar grid */}
+        <div className="px-4 pt-2 pb-4">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {DAY_LABELS.map((d, i) => (
+              <div key={`${d}-${i}`} className="text-center text-xs font-semibold text-zinc-400 py-2">
+                {d}
+              </div>
+            ))}
+          </div>
 
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((day, i) => {
-            if (!day) return <div key={`empty-${i}`} />;
-            const dateStr = toISO(viewYear, viewMonth, day);
-            const isPast = dateStr < today;
-            const isToday = dateStr === today;
-            const isSelected = dateStr === selectedDate;
+          {/* Day cells */}
+          <div className="grid grid-cols-7 gap-y-1">
+            {cells.map((day, i) => {
+              if (!day) return <div key={`empty-${i}`} />;
+              const dateStr = toISO(viewYear, viewMonth, day);
+              const isPast = dateStr < today;
+              const isToday = dateStr === today;
+              const isSelected = dateStr === selectedDate;
 
-            return (
-              <button
-                key={dateStr}
-                id={`cal-day-${dateStr}`}
-                type="button"
-                disabled={isPast}
-                onClick={() => handleDateSelect(dateStr)}
-                className={[
-                  'flex h-9 w-full items-center justify-center rounded-lg text-sm transition-colors',
-                  isPast
-                    ? 'cursor-not-allowed text-gray-300'
-                    : isSelected
-                    ? 'bg-gray-900 text-white font-semibold'
-                    : isToday
-                    ? 'border border-gray-900 text-gray-900 font-semibold hover:bg-gray-50'
-                    : 'text-gray-700 hover:bg-gray-100',
-                ].join(' ')}
-              >
-                {day}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={dateStr}
+                  id={`cal-day-${dateStr}`}
+                  type="button"
+                  disabled={isPast}
+                  onClick={() => handleDateSelect(dateStr)}
+                  className={[
+                    'mx-auto flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-all duration-150 active:scale-90',
+                    isPast
+                      ? 'cursor-not-allowed text-zinc-200'
+                      : isSelected
+                      ? 'bg-zinc-900 text-white font-bold shadow-md scale-110'
+                      : isToday
+                      ? 'ring-2 ring-zinc-900 text-zinc-900 font-bold hover:bg-zinc-100'
+                      : 'text-zinc-700 hover:bg-zinc-100',
+                  ].join(' ')}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Time slots */}
       {selectedDate && (
-        <div className="mt-5">
-          <p className="mb-3 text-sm font-medium text-gray-700">
-            Available times on{' '}
-            <span className="text-gray-900">
-              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', {
-                day: '2-digit', month: 'short', year: 'numeric',
-              })}
-            </span>
-          </p>
-
-          {loadingSlots && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Spinner className="h-4 w-4 text-gray-900" />
-              Loading available times…
+        <div className="mt-6 animate-slide-up">
+          {/* Selected date label */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">{selectedDateFormatted}</p>
+              {!loadingSlots && slots.length > 0 && (
+                <p className="text-xs text-zinc-500 mt-0.5">{slots.length} time{slots.length !== 1 ? 's' : ''} available</p>
+              )}
             </div>
-          )}
+            {loadingSlots && <Spinner className="h-5 w-5 text-zinc-900" />}
+          </div>
 
           {slotsError && (
-            <p className="text-sm text-red-500">{slotsError}</p>
+            <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium">
+              {slotsError}
+            </div>
           )}
 
           {!loadingSlots && !slotsError && slots.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No available slots on this date. Try another day.
-            </p>
+            <div className="rounded-2xl border border-dashed border-zinc-200 py-10 text-center">
+              <svg className="h-8 w-8 text-zinc-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm font-medium text-zinc-500">No available times</p>
+              <p className="text-xs text-zinc-400 mt-1">Try selecting another day</p>
+            </div>
           )}
 
           {!loadingSlots && slots.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {slots.map((time) => {
-                const isSelected =
-                  selectedSlot?.date === selectedDate && selectedSlot.time === time;
-                return (
-                  <button
-                    key={time}
-                    id={`slot-${time}`}
-                    type="button"
-                    onClick={() => handleSlotSelect(time)}
-                    className={[
-                      'rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
-                      isSelected
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400 hover:text-gray-900',
-                    ].join(' ')}
-                  >
-                    {time}
-                  </button>
-                );
-              })}
+            <div className="space-y-4">
+              {/* AM slots */}
+              {amSlots.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Morning</p>
+                  <div className="flex flex-wrap gap-2">
+                    {amSlots.map((time) => {
+                      const isSelected = selectedSlot?.date === selectedDate && selectedSlot.time === time;
+                      return (
+                        <button
+                          key={time}
+                          id={`slot-${time}`}
+                          type="button"
+                          onClick={() => handleSlotSelect(time)}
+                          className={[
+                            'px-4 py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150 active:scale-95',
+                            isSelected
+                              ? 'bg-zinc-900 border-zinc-900 text-white shadow-md'
+                              : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-900 hover:text-zinc-900',
+                          ].join(' ')}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* PM slots */}
+              {pmSlots.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Afternoon & Evening</p>
+                  <div className="flex flex-wrap gap-2">
+                    {pmSlots.map((time) => {
+                      const isSelected = selectedSlot?.date === selectedDate && selectedSlot.time === time;
+                      return (
+                        <button
+                          key={time}
+                          id={`slot-${time}`}
+                          type="button"
+                          onClick={() => handleSlotSelect(time)}
+                          className={[
+                            'px-4 py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150 active:scale-95',
+                            isSelected
+                              ? 'bg-zinc-900 border-zinc-900 text-white shadow-md'
+                              : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-900 hover:text-zinc-900',
+                          ].join(' ')}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+        </div>
+      )}
+
+      {!selectedDate && (
+        <div className="mt-6 rounded-2xl border border-dashed border-zinc-200 py-8 text-center">
+          <svg className="h-8 w-8 text-zinc-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p className="text-sm font-medium text-zinc-500">Select a date to see available times</p>
         </div>
       )}
     </div>

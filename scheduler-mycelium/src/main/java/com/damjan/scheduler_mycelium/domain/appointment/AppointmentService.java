@@ -142,8 +142,11 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findByPublicId(appointmentPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
-        if (appointment.getStatus() != Appointment.Status.BOOKED) {
-            throw new IllegalArgumentException("Only booked appointments can be cancelled");
+        if (appointment.getStatus() == Appointment.Status.CANCELLED) {
+            throw new IllegalArgumentException("This appointment has already been cancelled");
+        }
+        if (appointment.getStatus() == Appointment.Status.COMPLETED) {
+            throw new IllegalArgumentException("This appointment has already been completed and cannot be cancelled");
         }
 
         if (role == Account.Role.SUPER_ADMIN) {
@@ -174,7 +177,7 @@ public class AppointmentService {
 
             LocalDateTime cutoffTime = appointment.getStartTime().minusHours(settings.getCancellationCutoffHours());
             if (LocalDateTime.now().isAfter(cutoffTime)) {
-                throw new IllegalArgumentException("It's too late to cancel this appointment");
+                throw new IllegalArgumentException("It's too late to cancel this appointment. Cancellations must be made at least " + settings.getCancellationCutoffHours() + " hours in advance.");
             }
         } else if (cancelledBy == Appointment.CancelledBy.STAFF || cancelledBy == Appointment.CancelledBy.BUSINESS_OWNER) {
             if (cancelledBy == Appointment.CancelledBy.BUSINESS_OWNER) {
@@ -221,8 +224,11 @@ public class AppointmentService {
             }
         }
 
-        if (appointment.getStatus() != Appointment.Status.BOOKED) {
-            throw new IllegalArgumentException("Only booked appointments can be completed");
+        if (appointment.getStatus() == Appointment.Status.COMPLETED) {
+            throw new IllegalArgumentException("This appointment is already completed");
+        }
+        if (appointment.getStatus() == Appointment.Status.CANCELLED) {
+            throw new IllegalArgumentException("This appointment has been cancelled and cannot be completed");
         }
 
         appointment.setStatus(Appointment.Status.COMPLETED);

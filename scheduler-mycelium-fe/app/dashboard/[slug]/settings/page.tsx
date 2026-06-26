@@ -89,6 +89,7 @@ export default function DashboardSettingsPage() {
       });
       setBizSaved(true);
       setTimeout(() => setBizSaved(false), 3000);
+      window.location.reload();
     } catch (e) {
       setBizError(e instanceof Error ? e.message : 'Failed to save.');
     } finally {
@@ -112,6 +113,7 @@ export default function DashboardSettingsPage() {
       });
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 3000);
+      window.location.reload();
     } catch (e) {
       setSettingsError(e instanceof Error ? e.message : 'Failed to save.');
     } finally {

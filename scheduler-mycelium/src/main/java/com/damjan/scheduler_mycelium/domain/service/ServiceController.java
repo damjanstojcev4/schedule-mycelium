@@ -52,6 +52,15 @@ public class ServiceController {
         return ResponseEntity.ok(serviceService.getActiveServices(publicId));
     }
 
+    @Operation(summary = "List all services for a business (including inactive)")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @ApiResponse(responseCode = "200",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = ServiceResponseDTO.class))))
+    @GetMapping("/all")
+    public ResponseEntity<List<ServiceResponseDTO>> getAllServices(@PathVariable UUID publicId, Authentication auth) {
+        return ResponseEntity.ok(serviceService.getAllServices(publicId, auth));
+    }
+
     @Operation(summary = "Update a service")
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = ServiceResponseDTO.class)))
@@ -73,6 +82,18 @@ public class ServiceController {
             @PathVariable UUID servicePublicId,
             Authentication auth) {
         serviceService.deactivateService(publicId, servicePublicId, auth);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Activate a service")
+    @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
+    @ApiResponse(responseCode = "204", description = "Activated")
+    @PatchMapping("/{servicePublicId}/activate")
+    public ResponseEntity<Void> activateService(
+            @PathVariable UUID publicId,
+            @PathVariable UUID servicePublicId,
+            Authentication auth) {
+        serviceService.activateService(publicId, servicePublicId, auth);
         return ResponseEntity.noContent().build();
     }
 }

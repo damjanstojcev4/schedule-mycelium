@@ -48,18 +48,24 @@ public class AccountService {
         if (account.getRole() == Account.Role.CUSTOMER) {
             Customer customer = new Customer();
             customer.setAccount(account);
-            customer.setFullName(request.getEmail().split("@")[0]);
+            // Use the submitted fullName if provided, otherwise fall back to email prefix
+            String name = (request.getFullName() != null && !request.getFullName().isBlank())
+                    ? request.getFullName().trim()
+                    : request.getEmail().split("@")[0];
+            customer.setFullName(name);
             customerRepository.save(customer);
         }
 
         String token = jwtUtil.generateToken(account);
         String slug = resolveSlug(account);
         UUID businessPublicId = resolveBusinessPublicId(account);
+        String fullName = resolveFullName(account);
 
         return new AuthResponseDTO(
                 token,
                 account.getPublicId(),
                 account.getEmail(),
+                fullName,
                 account.getRole().name(),
                 slug,
                 businessPublicId
@@ -77,11 +83,13 @@ public class AccountService {
         String token = jwtUtil.generateToken(account);
         String slug = resolveSlug(account);
         UUID businessPublicId = resolveBusinessPublicId(account);
+        String fullName = resolveFullName(account);
 
         return new AuthResponseDTO(
                 token,
                 account.getPublicId(),
                 account.getEmail(),
+                fullName,
                 account.getRole().name(),
                 slug,
                 businessPublicId
@@ -123,6 +131,18 @@ public class AccountService {
             return staffMemberRepository.findByAccountId(account.getId())
                     .map(StaffMember::getBusiness)
                     .map(Business::getPublicId)
+                    .orElse(null);
+        }
+        return null;
+    }
+
+    /**
+     * Returns the Customer's fullName for CUSTOMER-role accounts; null for all other roles.
+     */
+    private String resolveFullName(Account account) {
+        if (account.getRole() == Account.Role.CUSTOMER) {
+            return customerRepository.findByAccountId(account.getId())
+                    .map(Customer::getFullName)
                     .orElse(null);
         }
         return null;

@@ -14,6 +14,7 @@ public class AuthResponseDTO {
     private String token;
     private UUID publicId;
     private String email;
+    private String fullName;  // Customer full name; null for non-CUSTOMER roles
     private String role;
     private String slug;  // Business slug for BUSINESS_OWNER/STAFF, null otherwise
     private UUID businessPublicId; // Business publicId for BUSINESS_OWNER/STAFF

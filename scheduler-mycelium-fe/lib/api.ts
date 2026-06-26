@@ -164,6 +164,9 @@ export const api = {
   getServices: (businessPublicId: string) =>
     request<Service[]>(`/api/businesses/${businessPublicId}/services`),
 
+  getAllServices: (businessPublicId: string) =>
+    request<Service[]>(`/api/businesses/${businessPublicId}/services/all`),
+
   createService: (businessPublicId: string, body: CreateServiceRequest) =>
     request<Service>(`/api/businesses/${businessPublicId}/services`, {
       method: 'POST',
@@ -179,6 +182,11 @@ export const api = {
   deactivateService: (businessPublicId: string, publicId: string) =>
     request<void>(`/api/businesses/${businessPublicId}/services/${publicId}`, {
       method: 'DELETE',
+    }),
+
+  activateService: (businessPublicId: string, publicId: string) =>
+    request<void>(`/api/businesses/${businessPublicId}/services/${publicId}/activate`, {
+      method: 'PATCH',
     }),
 
   // ─── Dashboard — Staff ──────────────────────────────────────────────────────

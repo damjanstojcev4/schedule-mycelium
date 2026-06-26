@@ -65,6 +65,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [slug]);
 
   useEffect(() => {
+    if (auth === null) return; // still loading/hydrating
     if (!auth) {
       router.replace('/login');
       return;
@@ -79,6 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [auth, slug, router]);
 
+  if (auth === null) return null; // still loading
   if (!auth || auth.role !== 'BUSINESS_OWNER') return null;
 
   const navLinks = [
@@ -123,7 +125,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         onClose={() => setIsSidebarOpen(false)}
       />
       <main className="flex-1 overflow-y-auto w-full">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">{children}</div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8">{children}</div>
       </main>
     </div>
   );

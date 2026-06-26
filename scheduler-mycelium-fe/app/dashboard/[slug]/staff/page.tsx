@@ -120,6 +120,8 @@ export default function DashboardStaffPage() {
       // If the backend auto-created a new account, show the one-time credentials
       if (created.tempPassword) {
         setNewCredentials({ email: created.email, password: created.tempPassword });
+      } else {
+        window.location.reload();
       }
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Failed to add staff.');
@@ -134,6 +136,7 @@ export default function DashboardStaffPage() {
     try {
       await api.removeStaff(businessPublicId, member.publicId);
       setStaff((prev) => prev.filter((s) => s.publicId !== member.publicId));
+      window.location.reload();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Failed to remove staff.');
     }
@@ -178,7 +181,10 @@ export default function DashboardStaffPage() {
             </div>
             <button
               type="button"
-              onClick={() => setNewCredentials(null)}
+              onClick={() => {
+                setNewCredentials(null);
+                window.location.reload();
+              }}
               className="shrink-0 rounded-lg p-1 text-amber-600 hover:bg-amber-100 transition-colors"
               aria-label="Dismiss"
             >

@@ -22,4 +22,8 @@ public class RegisterRequestDTO {
     @NotBlank
     @Schema(description = "Account role", example = "CUSTOMER", allowableValues = {"CUSTOMER", "BUSINESS_OWNER", "STAFF"})
     private String role;
+
+    // Optional — used to pre-populate the Customer profile fullName on registration.
+    // If not provided, falls back to the email prefix.
+    private String fullName;
 }

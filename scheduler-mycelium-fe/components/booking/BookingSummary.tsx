@@ -6,51 +6,53 @@ export function BookingSummary() {
 
   if (!selectedService) return null;
 
+  const dateFormatted = selectedSlot
+    ? new Date(selectedSlot.date + 'T00:00:00').toLocaleDateString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short',
+      })
+    : null;
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-        Summary
-      </h3>
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3 bg-white border-b border-zinc-100">
+        <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Booking Summary</p>
+      </div>
 
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between gap-2">
-          <span className="text-gray-500">Service</span>
-          <span className="font-medium text-gray-900 text-right">{selectedService.name}</span>
+      {/* Details */}
+      <div className="px-4 py-3 space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-sm text-zinc-500">Service</span>
+          <span className="text-sm font-semibold text-zinc-900 text-right">{selectedService.name}</span>
         </div>
-
-        <div className="flex justify-between gap-2">
-          <span className="text-gray-500">Duration</span>
-          <span className="font-medium text-gray-900">{selectedService.durationMinutes} min</span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-sm text-zinc-500">Duration</span>
+          <span className="text-sm font-semibold text-zinc-900">{selectedService.durationMinutes} min</span>
         </div>
-
         {selectedStaff && (
-          <div className="flex justify-between gap-2">
-            <span className="text-gray-500">Staff</span>
-            <span className="font-medium text-gray-900 text-right">{selectedStaff.name}</span>
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-sm text-zinc-500">With</span>
+            <span className="text-sm font-semibold text-zinc-900">{selectedStaff.name}</span>
           </div>
         )}
-
         {selectedSlot && (
           <>
-            <div className="flex justify-between gap-2">
-              <span className="text-gray-500">Date</span>
-              <span className="font-medium text-gray-900">
-                {new Date(selectedSlot.date + 'T00:00:00').toLocaleDateString('en-GB', {
-                  day: '2-digit', month: 'short', year: 'numeric',
-                })}
-              </span>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-sm text-zinc-500">Date</span>
+              <span className="text-sm font-semibold text-zinc-900">{dateFormatted}</span>
             </div>
-            <div className="flex justify-between gap-2">
-              <span className="text-gray-500">Time</span>
-              <span className="font-medium text-gray-900">{selectedSlot.time}</span>
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-sm text-zinc-500">Time</span>
+              <span className="text-sm font-semibold text-zinc-900">{selectedSlot.time}</span>
             </div>
           </>
         )}
+      </div>
 
-        <div className="border-t border-gray-200 pt-2 flex justify-between gap-2">
-          <span className="font-semibold text-gray-700">Total</span>
-          <span className="font-bold text-gray-900">{formatPrice(selectedService.price)}</span>
-        </div>
+      {/* Total */}
+      <div className="px-4 py-3 border-t border-zinc-200 bg-white flex justify-between items-center">
+        <span className="text-sm font-bold text-zinc-600">Total</span>
+        <span className="text-lg font-bold text-zinc-900">{formatPrice(selectedService.price)}</span>
       </div>
     </div>
   );

@@ -52,6 +52,17 @@ public class ServiceService {
                 .collect(Collectors.toList());
     }
 
+    public List<ServiceResponseDTO> getAllServices(UUID businessPublicId, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
+
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
+
+        return serviceRepository.findByBusinessId(business.getId()).stream()
+                .map(this::mapToServiceResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ServiceResponseDTO updateService(UUID businessPublicId, UUID servicePublicId, UpdateServiceRequestDTO request, Authentication auth) {
         tenantGuard.assertOwner(businessPublicId, auth);
@@ -91,6 +102,24 @@ public class ServiceService {
         }
 
         service.setIsActive(false);
+        serviceRepository.save(service);
+    }
+
+    @Transactional
+    public void activateService(UUID businessPublicId, UUID servicePublicId, Authentication auth) {
+        tenantGuard.assertOwner(businessPublicId, auth);
+
+        Business business = businessRepository.findByPublicId(businessPublicId)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
+
+        Service service = serviceRepository.findByPublicId(servicePublicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found with publicId: " + servicePublicId));
+
+        if (!service.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Service does not belong to this business");
+        }
+
+        service.setIsActive(true);
         serviceRepository.save(service);
     }
 

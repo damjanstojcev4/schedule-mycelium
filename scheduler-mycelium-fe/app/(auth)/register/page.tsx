@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 interface FormErrors {
+  fullName?: string;
   email?: string;
   password?: string;
   form?: string;
@@ -18,6 +19,7 @@ function RegisterForm() {
   const { register } = useAuth();
   const router = useRouter();
 
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
@@ -25,6 +27,7 @@ function RegisterForm() {
 
   function validate(): boolean {
     const e: FormErrors = {};
+    if (!fullName.trim()) e.fullName = 'Full name is required.';
     if (!email) e.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Enter a valid email.';
     if (!password) e.password = 'Password is required.';
@@ -39,7 +42,7 @@ function RegisterForm() {
     setLoading(true);
     setErrors({});
     try {
-      await register({ email, password, role: 'CUSTOMER' });
+      await register({ email, password, fullName: fullName.trim(), role: 'CUSTOMER' });
       router.push('/my-appointments');
     } catch (err) {
       setErrors({ form: err instanceof Error ? err.message : 'Registration failed.' });
@@ -49,23 +52,34 @@ function RegisterForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-zinc-50">
       <PublicNavbar />
 
       <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-            <p className="mt-1 text-sm text-gray-500">Get started in minutes</p>
+            <h1 className="text-2xl font-black text-zinc-900">Create your account</h1>
+            <p className="mt-1 text-sm text-zinc-500">Get started in minutes</p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate id="register-form">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate id="register-form">
               {errors.form && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 font-medium">
                   {errors.form}
                 </div>
               )}
+
+              <Input
+                id="register-fullname"
+                label="Full name"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                error={errors.fullName}
+                placeholder="Jane Smith"
+                autoComplete="name"
+              />
 
               <Input
                 id="register-email"
@@ -89,21 +103,24 @@ function RegisterForm() {
                 autoComplete="new-password"
               />
 
-              <Button
-                id="register-submit-btn"
-                type="submit"
-                loading={loading}
-                className="w-full"
-              >
-                Create account
-              </Button>
+              <div className="pt-1">
+                <Button
+                  id="register-submit-btn"
+                  type="submit"
+                  loading={loading}
+                  size="lg"
+                  fullWidth
+                >
+                  Create account
+                </Button>
+              </div>
             </form>
 
-            <p className="mt-5 text-center text-sm text-gray-500">
+            <p className="mt-5 text-center text-sm text-zinc-500">
               Already have an account?{' '}
               <Link
                 href="/login"
-                className="font-medium text-gray-900 hover:text-black hover:underline"
+                className="font-semibold text-zinc-900 hover:underline underline-offset-2"
               >
                 Sign in
               </Link>
@@ -118,8 +135,8 @@ function RegisterForm() {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-900 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-900 border-t-transparent" />
       </div>
     }>
       <RegisterForm />

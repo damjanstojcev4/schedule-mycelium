@@ -4,6 +4,7 @@ export interface AuthResponse {
   token: string;
   accountId: number;
   email: string;
+  fullName: string | null;
   role: Role;
   slug: string | null;
   businessPublicId: string | null;
@@ -17,6 +18,7 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
+  fullName?: string;
   role: 'CUSTOMER' | 'BUSINESS_OWNER';
 }
 

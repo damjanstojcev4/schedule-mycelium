@@ -176,13 +176,13 @@ export default function AdminBusinessesPage() {
                   </td>
                   <td className="px-5 py-4 text-gray-500 font-mono text-xs">{b.slug}</td>
                   <td className="px-5 py-4">
-                    <TextBadge label={b.category} variant="gray" />
+                    <TextBadge label={b.category} variant="default" />
                   </td>
                   <td className="px-5 py-4">
                     {b.soloOperator ? (
                       <TextBadge label="Solo" variant="blue" />
                     ) : (
-                      <TextBadge label="Team" variant="gray" />
+                      <TextBadge label="Team" variant="default" />
                     )}
                   </td>
                   <td className="px-5 py-4 text-gray-400 text-xs">{formatDate(b.createdAt)}</td>
@@ -381,6 +381,7 @@ export default function AdminBusinessesPage() {
                     await api.adminDeleteBusiness(businessToDelete.publicId);
                     setBusinesses((prev) => prev.filter((b) => b.publicId !== businessToDelete.publicId));
                     setBusinessToDelete(null);
+                    window.location.reload();
                   } catch (err) {
                     alert(err instanceof Error ? err.message : 'Failed to delete business.');
                   } finally {

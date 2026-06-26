@@ -37,6 +37,11 @@ export default function DashboardServicesPage() {
   const [form, setForm] = useState<ServiceFormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  
+  // Custom confirmation modal state
+  const [confirmAction, setConfirmAction] = useState<{ type: 'activate' | 'deactivate'; service: Service } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     if (!businessPublicId) {
@@ -56,7 +61,7 @@ export default function DashboardServicesPage() {
 
     setLoading(true);
     api
-      .getServices(businessPublicId)
+      .getAllServices(businessPublicId)
       .then(setServices)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -111,6 +116,7 @@ export default function DashboardServicesPage() {
       if (editingService) {
         const updated = await api.updateService(businessPublicId, editingService.publicId, body);
         setServices((prev) => prev.map((s) => (s.publicId === editingService.publicId ? updated : s)));
+        window.location.reload();
       } else {
         const created = await api.createService(businessPublicId, body);
         setServices((prev) => [...prev, created]);
@@ -123,16 +129,39 @@ export default function DashboardServicesPage() {
     }
   }
 
-  async function handleDeactivate(service: Service) {
-    if (!businessPublicId) return;
-    if (!confirm(`Deactivate "${service.name}"? It will no longer appear in booking.`)) return;
+  function triggerDeactivate(service: Service) {
+    setConfirmAction({ type: 'deactivate', service });
+    setActionError('');
+  }
+
+  function triggerActivate(service: Service) {
+    setConfirmAction({ type: 'activate', service });
+    setActionError('');
+  }
+
+  async function executeConfirmAction() {
+    if (!businessPublicId || !confirmAction) return;
+    setActionLoading(true);
+    setActionError('');
+    const { type, service } = confirmAction;
     try {
-      await api.deactivateService(businessPublicId, service.publicId);
-      setServices((prev) =>
-        prev.map((s) => (s.publicId === service.publicId ? { ...s, isActive: false } : s)),
-      );
+      if (type === 'deactivate') {
+        await api.deactivateService(businessPublicId, service.publicId);
+        setServices((prev) =>
+          prev.map((s) => (s.publicId === service.publicId ? { ...s, isActive: false } : s)),
+        );
+      } else {
+        await api.activateService(businessPublicId, service.publicId);
+        setServices((prev) =>
+          prev.map((s) => (s.publicId === service.publicId ? { ...s, isActive: true } : s)),
+        );
+      }
+      setConfirmAction(null);
+      window.location.reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to deactivate.');
+      setActionError(e instanceof Error ? e.message : `Failed to ${type}.`);
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -180,9 +209,7 @@ export default function DashboardServicesPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-gray-900">{service.name}</span>
-                  {service.isActive ? (
-                    <Badge status="BOOKED" />
-                  ) : (
+                  {!service.isActive && (
                     <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
                       Inactive
                     </span>
@@ -205,15 +232,25 @@ export default function DashboardServicesPage() {
                 >
                   Edit
                 </Button>
-                {service.isActive && (
+                {service.isActive ? (
                   <Button
                     id={`deactivate-service-${service.publicId}`}
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeactivate(service)}
+                    onClick={() => triggerDeactivate(service)}
                     className="text-gray-500 hover:text-red-600"
                   >
                     Deactivate
+                  </Button>
+                ) : (
+                  <Button
+                    id={`activate-service-${service.publicId}`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => triggerActivate(service)}
+                    className="text-gray-500 hover:text-blue-600"
+                  >
+                    Activate
                   </Button>
                 )}
               </div>
@@ -274,6 +311,43 @@ export default function DashboardServicesPage() {
             </Button>
             <Button id="save-service-btn" loading={saving} onClick={handleSave} className="flex-1">
               {editingService ? 'Save changes' : 'Add service'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={confirmAction !== null}
+        onClose={() => !actionLoading && setConfirmAction(null)}
+        title={confirmAction?.type === 'deactivate' ? 'Deactivate Service' : 'Activate Service'}
+      >
+        <div className="space-y-4">
+          {actionError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {actionError}
+            </div>
+          )}
+          <p className="text-sm text-gray-600">
+            {confirmAction?.type === 'deactivate'
+              ? `Are you sure you want to deactivate "${confirmAction?.service.name}"? It will no longer appear in booking.`
+              : `Are you sure you want to activate "${confirmAction?.service.name}"? It will now appear in booking.`}
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setConfirmAction(null)} disabled={actionLoading}>
+              Cancel
+            </Button>
+            <Button
+              id="confirm-action-btn"
+              loading={actionLoading}
+              onClick={executeConfirmAction}
+              className={`flex-1 ${
+                confirmAction?.type === 'deactivate'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {confirmAction?.type === 'deactivate' ? 'Deactivate' : 'Activate'}
             </Button>
           </div>
         </div>

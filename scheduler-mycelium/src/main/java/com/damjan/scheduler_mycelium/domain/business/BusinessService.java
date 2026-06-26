@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.damjan.scheduler_mycelium.domain.appointment.AppointmentRepository;
 import com.damjan.scheduler_mycelium.domain.service.ServiceRepository;
 import com.damjan.scheduler_mycelium.domain.staff.StaffDayOffRepository;
+import com.damjan.scheduler_mycelium.domain.customer.CustomerRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalTime;
 import java.util.List;
@@ -37,6 +38,7 @@ public class BusinessService {
     private final StaffDayOffRepository staffDayOffRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantGuard tenantGuard;
+    private final CustomerRepository customerRepository;
 
     @Transactional
     public BusinessResponseDTO createBusiness(CreateBusinessRequestDTO request, Authentication auth) {
@@ -278,9 +280,28 @@ public class BusinessService {
 
         // 7. Delete staff accounts (if any) and owner account
         for (StaffMember staff : staffMembers) {
-            accountRepository.delete(staff.getAccount());
+            Account staffAcc = staff.getAccount();
+            if (staffAcc != null) {
+                customerRepository.findByAccountId(staffAcc.getId())
+                        .ifPresent(cust -> {
+                            appointmentRepository.findByCustomerId(cust.getId()).forEach(appt -> {
+                                appt.setCustomer(null);
+                                appointmentRepository.save(appt);
+                            });
+                            customerRepository.delete(cust);
+                        });
+                accountRepository.delete(staffAcc);
+            }
         }
         if (owner != null) {
+            customerRepository.findByAccountId(owner.getId())
+                    .ifPresent(cust -> {
+                        appointmentRepository.findByCustomerId(cust.getId()).forEach(appt -> {
+                            appt.setCustomer(null);
+                            appointmentRepository.save(appt);
+                        });
+                        customerRepository.delete(cust);
+                    });
             accountRepository.delete(owner);
         }
     }
