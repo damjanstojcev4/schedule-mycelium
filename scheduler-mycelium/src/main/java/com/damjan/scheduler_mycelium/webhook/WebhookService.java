@@ -1,13 +1,27 @@
 package com.damjan.scheduler_mycelium.webhook;
 
 import com.damjan.scheduler_mycelium.domain.appointment.Appointment;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Fires n8n webhook calls for booking lifecycle events.
+ * <p>
+ * Failures are intentionally swallowed — a webhook error must never roll back
+ * a booking. All failures are logged at WARN level for observability.
+ * <p>
+ * The injected {@link RestClient} is configured with connect/read timeouts
+ * in {@link com.damjan.scheduler_mycelium.config.WebhookConfig}.
+ */
+@Slf4j
 @Service
 public class WebhookService {
 
@@ -17,7 +31,12 @@ public class WebhookService {
     @Value("${webhook.booking-cancelled-url}")
     private String bookingCancelledUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    // Named bean from WebhookConfig — configured with 5s connect / 10s read timeouts.
+    private final RestClient restClient;
+
+    public WebhookService(@Qualifier("webhookRestClient") RestClient restClient) {
+        this.restClient = restClient;
+    }
 
     public void sendBookingConfirmation(Appointment appointment) {
         Map<String, Object> payload = buildPayload(appointment, "CONFIRMED");
@@ -67,11 +86,18 @@ public class WebhookService {
 
     private void fireWebhook(String url, Map<String, Object> payload) {
         try {
-            restTemplate.postForEntity(url, payload, String.class);
+            log.debug("Firing webhook [{}] for appointment {}", url, payload.get("appointmentId"));
+            restClient.post()
+                    .uri(url)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.debug("Webhook fired successfully [{}]", url);
         } catch (Exception e) {
-            // Never fail the booking if the webhook fails
-            // Just log and continue
-            System.err.println("[WebhookService] Webhook call failed: " + e.getMessage());
+            // Never fail the booking if the webhook fails — log and continue.
+            log.warn("Webhook call failed [url={}] — {}: {}",
+                    url, e.getClass().getSimpleName(), e.getMessage());
         }
     }
 }

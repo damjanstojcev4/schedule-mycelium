@@ -134,7 +134,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public void cancelAppointment(UUID appointmentPublicId, Authentication auth) {
+    public AppointmentResponseDTO cancelAppointment(UUID appointmentPublicId, Authentication auth) {
         UserDetailsServiceImpl.CustomUserDetails userDetails =
                 (UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal();
         Account.Role role = userDetails.getRole();
@@ -154,7 +154,7 @@ public class AppointmentService {
             appointment.setCancelledBy(Appointment.CancelledBy.BUSINESS_OWNER);
             Appointment saved = appointmentRepository.save(appointment);
             webhookService.sendCancellationNotification(saved);
-            return;
+            return mapToAppointmentResponse(saved);
         }
 
         Appointment.CancelledBy cancelledBy = switch (role) {
@@ -195,10 +195,11 @@ public class AppointmentService {
         appointment.setCancelledBy(cancelledBy);
         Appointment saved = appointmentRepository.save(appointment);
         webhookService.sendCancellationNotification(saved);
+        return mapToAppointmentResponse(saved);
     }
 
     @Transactional
-    public void completeAppointment(UUID appointmentPublicId, Authentication auth) {
+    public AppointmentResponseDTO completeAppointment(UUID appointmentPublicId, Authentication auth) {
         Appointment appointment = appointmentRepository.findByPublicId(appointmentPublicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
@@ -232,7 +233,8 @@ public class AppointmentService {
         }
 
         appointment.setStatus(Appointment.Status.COMPLETED);
-        appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        return mapToAppointmentResponse(saved);
     }
 
     public List<AppointmentResponseDTO> getMyAppointments(Authentication auth) {

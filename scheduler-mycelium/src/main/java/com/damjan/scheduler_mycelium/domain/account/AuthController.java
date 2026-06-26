@@ -41,11 +41,11 @@ public class AuthController {
     }
 
     @Operation(summary = "Login", description = "Authenticates with email and password. Returns a JWT.")
-    @ApiResponse(responseCode = "201", description = "Authenticated",
+    @ApiResponse(responseCode = "200", description = "Authenticated",
             content = @Content(schema = @Schema(implementation = AuthResponseDTO.class)))
     @ApiResponse(responseCode = "401", description = "Invalid credentials")
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(accountService.login(request));
+        return ResponseEntity.ok(accountService.login(request));
     }
 }

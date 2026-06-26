@@ -1,0 +1,132 @@
+name: Deploy — Push to Hetzner
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scheduler-mycelium/**"
+      - ".github/workflows/deploy.yml"
+  # Allow manual trigger from the GitHub Actions UI
+  workflow_dispatch:
+
+env:
+  # GitHub Container Registry image name.
+  # Uses the repository owner automatically — no manual substitution needed.
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/scheduler-mycelium
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Job 1: Build the Docker image and push it to GHCR
+  # ─────────────────────────────────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # required to push to GHCR
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # Tag with short git SHA (e.g. sha-abc1234) for traceability
+            type=sha,prefix=sha-,format=short
+            # Also tag as 'latest' for the default branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./scheduler-mycelium
+          file: ./scheduler-mycelium/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache stored in the Actions cache — speeds up subsequent builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Job 2: Deploy the new image to the Hetzner server
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Hetzner
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production   # configure approval gates in GitHub if desired
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          source: "scheduler-mycelium/docker-compose.yml"
+          target: "/opt/scheduler-mycelium/"
+          strip_components: 1
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            set -e
+            APP_DIR=/opt/scheduler-mycelium
+            cd "$APP_DIR"
+
+            # Authenticate with GHCR so we can pull the private image
+            echo "${{ secrets.GITHUB_TOKEN }}" | \
+              docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            # Pull the latest image (already built by job 1)
+            docker pull ${{ env.IMAGE_NAME }}:latest
+
+            # Update the APP_IMAGE var in the environment so compose uses it
+            # (The .env file on the server holds all secrets and is NOT changed here)
+            export APP_IMAGE=${{ env.IMAGE_NAME }}:latest
+
+            # Rolling restart: only restarts the app container, leaves DB running.
+            # The image is already pulled above so downtime = startup time only.
+            docker compose up -d --no-deps --pull never app
+
+            # Wait up to 2 minutes for the container to become healthy
+            echo "Waiting for health check..."
+            for i in $(seq 1 12); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' scheduler_app 2>/dev/null || echo "missing")
+              echo "  Check $i/12: $STATUS"
+              if [ "$STATUS" = "healthy" ]; then
+                echo "✅ Deployment successful — app is healthy"
+                break
+              fi
+              if [ "$i" -eq 12 ]; then
+                echo "❌ App did not become healthy after 120s"
+                docker compose logs app --tail=100
+                exit 1
+              fi
+              sleep 10
+            done
+
+            # Remove dangling images to reclaim disk space
+            docker image prune -f

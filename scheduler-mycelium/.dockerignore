@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────
+#  .dockerignore — Scheduler Mycelium Backend
+#  Keeps the Docker build context small and
+#  prevents secrets from leaking into images.
+# ─────────────────────────────────────────────
+
+# Build output — the Maven builder stage recreates this inside the image
+target/
+
+# Git metadata
+.git/
+.gitignore
+.gitattributes
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+.sts4-cache
+
+# Maven wrapper jar (only the scripts are needed; jar is downloaded on demand)
+.mvn/wrapper/maven-wrapper.jar
+
+# Secrets — NEVER bake these into the image
+.env
+.env.*
+!.env.example
+
+# Documentation — not needed in the image
+README.md
+HELP.md
+*.md
+LICENSE
+
+# Test reports
+**/surefire-reports/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

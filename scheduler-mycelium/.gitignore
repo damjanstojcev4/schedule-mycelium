@@ -33,4 +33,9 @@ build/
 .vscode/
 
 ### Custom Properties ###
+# application.properties and .env contain secrets — never commit them.
+# Use application.properties.example and .env.example as templates.
 src/main/resources/application.properties
+.env
+.env.*
+!.env.example

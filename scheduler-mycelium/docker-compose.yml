@@ -1,0 +1,78 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  docker-compose.yml — Scheduler Mycelium Production Stack
+#
+#  Services:
+#    db  — PostgreSQL 16 with a persistent named volume
+#    app — Spring Boot application (built from ./Dockerfile)
+#
+#  Usage on the Hetzner server:
+#    1. Copy this file and .env to /opt/scheduler-mycelium/
+#    2. docker compose pull   (or docker compose build)
+#    3. docker compose up -d
+#
+#  On the very first deployment set SPRING_JPA_HIBERNATE_DDL_AUTO=create in
+#  .env, start once, then change it back to 'validate' and restart.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: scheduler_db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Spring Boot Application ────────────────────────────────────────────────
+  app:
+    # In production the image is pulled from GHCR after the GitHub Actions
+    # deploy workflow builds and pushes it.
+    # For local builds use: docker compose build app
+    image: ${APP_IMAGE:-ghcr.io/YOUR_GITHUB_USERNAME/scheduler-mycelium:latest}
+    container_name: scheduler_app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # Nginx on the host forwards 443 → 8080 inside the container.
+      # Only bind to localhost so 8080 is not publicly exposed.
+      - "127.0.0.1:8080:8080"
+    networks:
+      - app_network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+
+# ── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  app_network:
+    driver: bridge

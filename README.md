@@ -1,211 +1,351 @@
-# Scheduler Mycelium
+# 🍄 Scheduler Mycelium
 
-A multi-tenant appointment scheduling backend for service businesses — salons, barbershops, clinics, studios, and similar operations where customers book time with specific staff members.
+A production-ready, multi-tenant appointment scheduling SaaS platform designed for service-based businesses (salons, barbershops, clinics, studios, and fitness centers) where clients book appointments with specific staff members.
 
-The API handles the full lifecycle: business setup, service catalog, staff availability, slot calculation, booking, cancellation, and completion. Each business operates as an isolated tenant; owners manage their own data, customers book online, and staff work within their assigned business.
-
----
-
-## Why this exists
-
-Most small service businesses still coordinate appointments manually — phone calls, DMs, paper calendars. That leads to double bookings, missed breaks, and no clear record of who cancelled what.
-
-Scheduler Mycelium provides a **single source of truth** for availability and appointments:
-
-- Customers see **real open slots** before they book, not guesswork.
-- Owners configure **services, staff hours, closures, and booking rules** in one place.
-- The system **prevents conflicts** by checking working hours, breaks, days off, business closures, and existing appointments before confirming a booking.
-
-This repository is the **REST API backend**. A frontend can consume these endpoints to build customer booking flows and owner dashboards.
+This project is structured as a monorepo containing a **Spring Boot 4 / Java 21 REST API backend** and a **Next.js / TypeScript / Tailwind CSS v4 frontend**.
 
 ---
 
-## How it works
+## 📌 Problem Domain & Solution
 
-### Roles
+### The Challenge
+Most small-to-medium service businesses coordinate appointments using manual processes (spreadsheets, phone calls, paper planners, or direct messages). This results in:
+*   **Double bookings and scheduling conflicts** due to lack of real-time validation.
+*   **Lost productivity** and missed breaks for staff members.
+*   **High cancellation rates** without enforceability.
+*   **No central audit trail** to track booking history, changes, or completions.
 
-| Role | Who | What they can do |
-|------|-----|------------------|
-| `CUSTOMER` | End user | Browse businesses, check slots, book/cancel own appointments, manage profile |
-| `BUSINESS_OWNER` | Business admin | Create a business, manage services/staff/settings/closures, complete appointments |
-| `STAFF` | Employee | View assigned appointments, cancel/complete within their business |
-
-### Typical booking flow
-
-1. **Owner** registers, creates a business, adds services and staff (with work hours and optional breaks).
-2. **Customer** registers, browses a business, picks a service and staff member.
-3. **Customer** calls `GET /api/slots` for a date — the engine returns bookable start times.
-4. **Customer** books one of those slots via `POST /api/appointments`.
-5. Either party can **cancel** (customers face a configurable cutoff window). Staff or owners can **mark complete**.
-
-### Slot availability engine
-
-`SlotAvailabilityService` computes open times by combining:
-
-- Staff **working hours** (`workStart` → `workEnd`)
-- Optional **break windows**
-- **Staff days off**
-- **Business-wide closure days** (holidays, etc.)
-- **Existing appointments** (overlap detection)
-- **Service duration** and configurable **slot interval** (from business settings)
-
-If a business is closed or a staff member is off that day, the slot list is empty — no error, just no availability.
-
-### Multi-tenancy
-
-Every business is a tenant. `TenantGuard` ensures owners can only mutate resources belonging to their business, and staff actions are scoped to the correct business. JWT tokens carry the account identity and role; protected endpoints reject cross-tenant access.
+### The Solution
+**Scheduler Mycelium** provides a single source of truth for real-time availability:
+*   **Isolated Multi-Tenancy:** Each business operates as an independent tenant.
+*   **Accurate Real-Time Slot Calculation:** A specialized scheduling engine matches business hours, breaks, days off, public closures, and existing appointments to compute absolute slot availability.
+*   **Stateless Authentication & Authorization:** Multi-role JWT-based security keeps tenant data secure and ensures workers only access information within their scope.
+*   **Automated Webhook Notifications:** Integrates with external systems (like n8n) to fire instant email or SMS alerts for bookings and cancellations.
 
 ---
 
-## Tech stack
+## 🛠️ Architecture & Tech Stack
 
-- **Java 21**
-- **Spring Boot 4** (Web, Data JPA, Security, Validation)
-- **PostgreSQL**
-- **JWT** authentication (jjwt)
-- **SpringDoc OpenAPI** — interactive API docs at `/swagger-ui.html`
-- **Lombok**
+### Monorepo Structure
+
+```
+scheduler-mycelium/ (Root)
+├── scheduler-mycelium/      # Java 21 / Spring Boot 4 REST API
+└── scheduler-mycelium-fe/   # Next.js / React 19 Frontend App
+```
+
+### Technology Matrix
+
+| Layer | Technology | Key Libraries / Frameworks |
+| :--- | :--- | :--- |
+| **Backend** | Java 21 / Spring Boot 4.0.6 | Spring Data JPA, Spring Security, Validation, Actuator |
+| **Database** | PostgreSQL | Hibernate validation / schema alignment |
+| **Authentication** | JWT (Stateless) | `jjwt` 0.12.6 |
+| **API Documentation** | OpenAPI 3.0 | `springdoc-openapi-starter-webmvc-ui` 3.0.2 |
+| **Frontend** | React 19 / Next.js 16.2.7 | Tailwind CSS v4, TypeScript |
+| **Notifications** | n8n Webhook Outbox | Spring `RestClient` with default connection/read timeouts |
+| **Infrastructure** | Docker & Docker Compose | Multi-stage distroless-like builder, Nginx proxy, Let's Encrypt |
 
 ---
 
-## Getting started
+## 🧬 Domain Model
+
+```
+               ┌──────────────────────────────────────────────────┐
+               │         Account (Auth / Security Actor)          │
+               │  (CUSTOMER | BUSINESS_OWNER | STAFF | SUPER_ADMIN) │
+               └───────────────────────┬──────────────────────────┘
+                                       │
+                ┌──────────────────────┴──────────────────────┐
+                ▼                                             ▼
+          ┌──────────┐                                 ┌──────────────┐
+          │ Customer │                                 │   Business   │
+          └────┬─────┘                                 │   (Tenant)   │
+               │                                       └──────┬───────┘
+               │                                              │
+               │         ┌───────────────────┬────────────────┼──────────────────┐
+               │         ▼                   ▼                ▼                  ▼
+               │   ┌───────────┐      ┌──────────────┐ ┌──────────────┐   ┌─────────────┐
+               │   │  Service  │      │   Settings   │ │   Closure    │   │ StaffMember │
+               │   │ (Catalog) │      │ (Rules/Slot) │ │  (Holidays)  │   │  (Hours)    │
+               │   └─────┬─────┘      └──────────────┘ └──────────────┘   └──────┬──────┘
+               │         │                                                       │
+               │         │                                                       ▼
+               │         │                                                ┌─────────────┐
+               │         │                                                │ StaffDayOff │
+               │         │                                                └─────────────┘
+               ▼         ▼                                                       │
+         ┌────────────────────────────────────────────────────────────────┐      │
+         │                          Appointment                           │◄─────┘
+         │               (BOOKED ──► CANCELLED | COMPLETED)               │
+         └────────────────────────────────────────────────────────────────┘
+```
+
+### Roles & Access Rights
+
+| Role | Entity | Capabilities |
+| :--- | :--- | :--- |
+| **`CUSTOMER`** | `Customer` | List businesses, query slots, book appointments, cancel own bookings, modify profile. |
+| **`BUSINESS_OWNER`** | `Business` | Complete setup, manage services/staff, configure tenant settings/closures, resolve billing/admin tasks, complete/cancel any booking. |
+| **`STAFF`** | `StaffMember` | View personal daily roster, cancel or mark completed their assigned appointments. |
+| **`SUPER_ADMIN`** | Platform | Globally monitor all tenants, audit logs, toggle business subscription status. |
+
+---
+
+## ⚙️ Slot Availability Engine
+
+The core value of the application is the `SlotAvailabilityService` engine. It computes bookable slots on a chosen date by executing a strict validation pipeline:
+
+```
+[Start of Day] ────────► [Staff Work Hours] ────────► [Subtract Staff Breaks]
+                                                             │
+[Available Slots] ◄─── [Filter Existing Bookings] ◄─── [Check Staff Days Off / Closures]
+```
+
+1.  **Staff Base Availability:** Looks up the active `StaffMember`’s starting and ending hours for the requested weekday.
+2.  **Break Windows:** Carves out time ranges designated for breaks.
+3.  **Staff Days Off & Business Closures:** Checks if the date falls on a `StaffDayOff` or a global `BusinessClosure` (e.g. public holidays). If matched, returns zero slots.
+4.  **Service Duration & Slot Interval:** Calculates slots based on `Service.duration` and the tenant's `BusinessSettings.slotInterval`.
+5.  **Appointment Intersection:** Eliminates times overlapping with existing `BOOKED` appointments.
+6.  **Cancellation Cutoff Enforcement:** When booking or modifying, ensures the time satisfies the tenant's `cancellationCutoffHours` rule.
+
+---
+
+## 🚦 Getting Started
 
 ### Prerequisites
+*   **Java Development Kit (JDK) 21**
+*   **Node.js v20+**
+*   **PostgreSQL 15+**
+*   **Maven 3.9+**
 
-- JDK 21
-- Maven 3.9+
-- PostgreSQL (local or remote)
-
-### Database
-
-Create a database (default name in config: `schedule`):
-
+### 1. Database Setup
+Create a PostgreSQL database for the scheduler:
 ```sql
 CREATE DATABASE schedule;
 ```
 
-### Configuration
-
-Edit `src/main/resources/application.properties`:
-
+### 2. Backend Configurations
+Navigate to `scheduler-mycelium/src/main/resources/application.properties` or configure env vars:
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/schedule
 spring.datasource.username=postgres
-spring.datasource.password=<your-password>
+spring.datasource.password=your_secure_password
 
-jwt.secret=<at-least-32-characters-for-hs256>
+jwt.secret=your_super_secret_signing_key_at_least_32_chars_long
 jwt.expiration-ms=86400000
+
+# Outbox Notifications Webhooks
+webhook.booking-confirmed=https://n8n.yourdomain.com/webhook/booking-confirmed
+webhook.booking-cancelled=https://n8n.yourdomain.com/webhook/booking-cancelled
 ```
 
-Hibernate `ddl-auto=update` is enabled for development — tables are created/updated automatically on startup.
-
-### Run
-
+Run the spring application in development mode (which automatically performs a database schema `update`):
 ```bash
+cd scheduler-mycelium
 mvn spring-boot:run
 ```
+*   **API Live at:** `http://localhost:8080`
+*   **Swagger API Docs:** `http://localhost:8080/swagger-ui/index.html`
 
-The server starts on **http://localhost:8080** by default.
+### 3. Frontend Setup
+Navigate to the frontend directory:
+```bash
+cd scheduler-mycelium-fe
+npm install
+```
 
-### API documentation
+Configure local environment variables in `scheduler-mycelium-fe/.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
 
-Open **http://localhost:8080/swagger-ui.html** to explore and test endpoints. Use **Authorize** with `Bearer <token>` after registering or logging in.
+Start the development server:
+```bash
+npm run dev
+```
+*   **Frontend Live at:** `http://localhost:3000`
 
 ---
 
-## API overview
+## 🌐 API Reference Overview
 
-Base path: `/api`
+Base Route: `/api`
 
-| Area | Path | Auth | Description |
-|------|------|------|-------------|
-| Auth | `POST /auth/register`, `POST /auth/login` | Public | Create account, get JWT |
-| Businesses | `GET/POST /businesses`, `GET /businesses/{id}` | Mixed | List/create/view businesses |
-| Settings | `PUT /businesses/{id}/settings` | Owner JWT | Cancellation cutoff, slot interval |
-| Closures | `GET/POST /businesses/{id}/closures` | Mixed | Business-wide days off |
-| Services | `/businesses/{businessId}/services` | Mixed | CRUD for offered services |
-| Staff | `/businesses/{businessId}/staff` | Mixed | Staff roster, hours, days off |
-| Slots | `GET /slots?businessId&staffId&serviceId&date` | Public | Available time slots |
-| Appointments | `/appointments` | JWT | Book, list, cancel, complete |
-| Customer | `GET/PUT /customers/me` | Customer JWT | Profile management |
+### Auth & Account Endpoints
+*   `POST /auth/register` - Create user account (returns user details).
+*   `POST /auth/login` - Authenticate credentials (returns JWT token in body + profile payload).
 
-Public endpoints (no token): auth, business listing/detail, services/staff listing, slot lookup.
+### Tenant & Settings Endpoints
+*   `POST /businesses` - Create business tenant profile (`BUSINESS_OWNER` only).
+*   `GET /businesses/{id}` - Public business information lookup.
+*   `PUT /businesses/{id}/settings` - Update booking settings (cutoff rules, interval).
+*   `POST /businesses/{id}/closures` - Add holidays or operational closure dates.
 
-Owner-only mutations require a `BUSINESS_OWNER` JWT and pass through `TenantGuard`.
+### Roster & Catalog Endpoints
+*   `GET/POST /businesses/{id}/services` - Manage catalog services.
+*   `GET/POST /businesses/{id}/staff` - Register staff, define work hours.
+*   `POST /businesses/{id}/staff/{staffId}/daysoff` - Schedule staff-specific days off.
 
----
-
-## Domain model
-
-```
-Account (CUSTOMER | BUSINESS_OWNER | STAFF)
-   │
-   ├── Customer ──────────────┐
-   │                          │
-   └── Business (owner)       │
-         ├── BusinessSettings (cutoff hours, slot interval)
-         ├── BusinessClosure  (closure dates)
-         ├── Service          (name, duration, price)
-         ├── StaffMember      (hours, breaks, linked STAFF account)
-         │     └── StaffDayOff
-         └── Appointment ─────┘
-               (BOOKED → CANCELLED | COMPLETED)
-```
-
-Appointment statuses: `BOOKED`, `CANCELLED`, `COMPLETED`. Cancellations record who cancelled (`CUSTOMER`, `STAFF`, or `BUSINESS_OWNER`).
+### Appointment Engine Endpoints
+*   `GET /slots` - Public availability lookup. Query parameters: `businessId`, `staffId`, `serviceId`, `date`.
+*   `POST /appointments` - Book a slot (returns `AppointmentResponseDTO`).
+*   `POST /appointments/{id}/cancel` - Cancel appointment (returns updated `AppointmentResponseDTO`).
+*   `POST /appointments/{id}/complete` - Mark appointment as fulfilled.
 
 ---
 
-## Project structure
+## 🚢 Production Deployment
+
+The production environment runs containerized applications on a **Hetzner Cloud VPS (Ubuntu 24.04)** behind **Nginx** acting as a reverse proxy with auto-renewed **Let's Encrypt SSL** certificates. Continuous Integration and Continuous Deployment are automated using **GitHub Actions**.
+
+### Infrastructure Layout
 
 ```
-src/main/java/com/damjan/scheduler_mycelium/
-├── config/          Security, OpenAPI, Swagger UI
-├── domain/
-│   ├── account/     Registration, login, JWT issuance
-│   ├── business/    Businesses, settings, closures
-│   ├── customer/    Customer profiles
-│   ├── service/     Service catalog per business
-│   ├── staff/       Staff members and days off
-│   └── appointment/ Booking and lifecycle
-├── scheduling/      Slot availability engine
-├── security/        JWT filter, TenantGuard, user details
-└── exception/       Global error handling (404, 400, 401, 403, 409, …)
+                        [ Internet ]
+                             │
+                             ▼ (HTTPS on Port 443)
+                      ┌──────────────┐
+                      │    Nginx     │
+                      └──────┬───────┘
+                             │
+            ┌────────────────┴────────────────┐
+            ▼ (Proxy Pass to Port 8080)       ▼ (Vercel Integration)
+  ┌───────────────────┐             ┌───────────────────┐
+  │   Spring Boot     │             │      Next.js      │
+  │ (Docker Container)│             │ (Vercel Frontend) │
+  └─────────┬─────────┘             └───────────────────┘
+            │
+            ▼ (Internal Docker Network)
+  ┌───────────────────┐
+  │    PostgreSQL     │
+  │ (Docker Container)│
+  └───────────────────┘
 ```
 
----
+### Production Setup Instructions
 
-## Error responses
+#### 1. Server Configuration (Hetzner VPS)
+Install Docker Engine and configure your firewall / dependencies:
+```bash
+# Update repositories and install Docker
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+newgrp docker
 
-All handled errors return JSON:
+# Install reverse proxy and SSL tools
+sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx
 
-```json
-{
-  "status": 404,
-  "error": "Not Found",
-  "message": "Appointment not found"
+# Create installation directory
+sudo mkdir -p /opt/scheduler-mycelium
+sudo chown $USER:$USER /opt/scheduler-mycelium
+```
+
+#### 2. Environment Setup
+Copy the production environment template file onto the server at `/opt/scheduler-mycelium/.env` and edit configurations:
+```bash
+cd /opt/scheduler-mycelium
+nano .env
+```
+Ensure you set secure production passwords and keys:
+*   `SPRING_DATASOURCE_PASSWORD` / `POSTGRES_PASSWORD` - Cryptographically strong database passwords.
+*   `JWT_SECRET` - Generate using `openssl rand -hex 64`.
+*   `CORS_ALLOWED_ORIGINS` - Production Frontend URL (e.g. `https://scheduler.yourdomain.com`).
+*   `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` - Assures database schema is read-only and verified at runtime.
+
+#### 3. Database Schema Initialization (First Time Run)
+On the initial run, the tables must be created:
+1. Temporarily modify `/opt/scheduler-mycelium/.env` to include: `SPRING_JPA_HIBERNATE_DDL_AUTO=create`
+2. Run `docker compose up -d` to launch PostgreSQL and Spring Boot.
+3. Check application logs to confirm schema creation succeeded.
+4. Modify `.env` to return `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` and execute `docker compose up -d app` to restart the backend container securely.
+
+#### 4. Configure Nginx Reverse Proxy
+Create configuration file `/etc/nginx/sites-available/scheduler-mycelium`:
+```nginx
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name api.yourdomain.com;
+
+    ssl_certificate     /etc/letsencrypt/live/api.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.yourdomain.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location / {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
 }
 ```
-
-Validation errors include a `fieldErrors` map. See `GlobalExceptionHandler` for the full mapping.
-
----
-
-## Development
-
+Enable the configuration and configure SSL certificates using Certbot:
 ```bash
-# Compile
-mvn compile
-
-# Run tests
-mvn test
-
-# Package
-mvn package
+sudo ln -s /etc/nginx/sites-available/scheduler-mycelium /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d api.yourdomain.com
 ```
 
 ---
 
-## License
+## 🤖 CI/CD Pipelines
 
-MIT License — see [LICENSE](scheduler-mycelium/LICENSE).
+Automated workflows are located in the `.github/workflows` directory:
+
+1.  **Continuous Integration (`ci.yml`):**
+    *   Fires on all pull requests and pushes to development branches.
+    *   Launches a PostgreSQL service container in GitHub Actions.
+    *   Builds the Spring Boot project and runs unit and integration tests.
+2.  **Continuous Deployment (`deploy.yml`):**
+    *   Fires automatically on a push to the `main` branch.
+    *   Compiles, packages, and builds a production-grade multi-stage Docker image.
+    *   Pushes the built container to **GitHub Container Registry (GHCR)**.
+    *   Logs into the Hetzner target host via SSH, pulls down the new image, updates the application container with no database downtime, and runs health checks.
+
+### Required GitHub Repository Secrets
+Under your GitHub Repository settings, define the following variables:
+*   `HETZNER_HOST` - Public IP Address of the VPS.
+*   `HETZNER_USER` - The deployment user account (e.g., `ubuntu`).
+*   `HETZNER_SSH_KEY` - The SSH private key corresponding to the public key on the host.
+
+---
+
+## 🛠️ Management & Monitoring Commands
+
+Use these commands on the production host to inspect the application runtime:
+
+```bash
+cd /opt/scheduler-mycelium
+
+# Check Docker services health
+docker compose ps
+
+# Stream backend container logs
+docker compose logs -f app
+
+# Inspect health details via Spring Actuator
+curl http://localhost:8080/actuator/health
+
+# Perform a manual PostgreSQL backup
+docker compose exec db pg_dump -U scheduler schedule > backup_$(date +%Y%m%d).sql
+
+# Restore a database backup
+cat backup.sql | docker compose exec -T db psql -U scheduler -d schedule
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. Details can be found in the [LICENSE](LICENSE) file.

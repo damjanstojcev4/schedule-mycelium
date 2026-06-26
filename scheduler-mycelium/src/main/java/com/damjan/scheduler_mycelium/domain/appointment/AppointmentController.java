@@ -63,18 +63,18 @@ public class AppointmentController {
     }
 
     @Operation(summary = "Cancel appointment", description = "Customer, assigned staff, or business owner may cancel.")
-    @ApiResponse(responseCode = "200", description = "Cancelled")
+    @ApiResponse(responseCode = "200", description = "Cancelled",
+            content = @Content(schema = @Schema(implementation = AppointmentResponseDTO.class)))
     @PatchMapping("/{publicId}/cancel")
-    public ResponseEntity<Void> cancelAppointment(@PathVariable UUID publicId, Authentication auth) {
-        appointmentService.cancelAppointment(publicId, auth);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<AppointmentResponseDTO> cancelAppointment(@PathVariable UUID publicId, Authentication auth) {
+        return ResponseEntity.ok(appointmentService.cancelAppointment(publicId, auth));
     }
 
     @Operation(summary = "Complete appointment", description = "Staff or business owner marks appointment as completed.")
-    @ApiResponse(responseCode = "200", description = "Completed")
+    @ApiResponse(responseCode = "200", description = "Completed",
+            content = @Content(schema = @Schema(implementation = AppointmentResponseDTO.class)))
     @PatchMapping("/{publicId}/complete")
-    public ResponseEntity<Void> completeAppointment(@PathVariable UUID publicId, Authentication auth) {
-        appointmentService.completeAppointment(publicId, auth);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<AppointmentResponseDTO> completeAppointment(@PathVariable UUID publicId, Authentication auth) {
+        return ResponseEntity.ok(appointmentService.completeAppointment(publicId, auth));
     }
 }

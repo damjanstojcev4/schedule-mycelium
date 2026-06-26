@@ -20,6 +20,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,9 +42,11 @@ public class BusinessController {
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     @ApiResponse(responseCode = "201", description = "Business created",
             content = @Content(schema = @Schema(implementation = BusinessResponseDTO.class)))
+    @ApiResponse(responseCode = "403", description = "Caller is not a BUSINESS_OWNER")
+    @PreAuthorize("hasAuthority('ROLE_BUSINESS_OWNER')")
     @PostMapping
     public ResponseEntity<BusinessResponseDTO> createBusiness(@Valid @RequestBody CreateBusinessRequestDTO request,
-                                                                Authentication auth) {
+                                                              Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED).body(businessService.createBusiness(request, auth));
     }
 
