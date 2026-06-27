@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class SchedulerMyceliumApplication {
 
 	public static void main(String[] args) {
-		// Triggering production deployment workflow
+		// Triggering production deployment
 		SpringApplication.run(SchedulerMyceliumApplication.class, args);
 	}
 
