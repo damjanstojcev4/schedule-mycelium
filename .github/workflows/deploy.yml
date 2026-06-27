@@ -85,7 +85,7 @@ jobs:
           target: "/opt/scheduler-mycelium/"
           strip_components: 1
 
-      - name: Deploy via SSH
+      - name: Deploy to Hetzner
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HETZNER_HOST }}
@@ -94,39 +94,22 @@ jobs:
           script: |
             set -e
             APP_DIR=/opt/scheduler-mycelium
+            mkdir -p "$APP_DIR"
             cd "$APP_DIR"
-
-            # Authenticate with GHCR so we can pull the private image
+            
+            # Authenticate with GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | \
               docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-            # Pull the latest image (already built by job 1)
+            
+            # Pull the latest image
             docker pull ${{ env.IMAGE_NAME }}:latest
-
-            # Update the APP_IMAGE var in the environment so compose uses it
-            # (The .env file on the server holds all secrets and is NOT changed here)
+            
+            # Stop and remove old container
+            docker compose down app 2>/dev/null || true
+            
+            # Start with new image
             export APP_IMAGE=${{ env.IMAGE_NAME }}:latest
-
-            # Rolling restart: only restarts the app container, leaves DB running.
-            # The image is already pulled above so downtime = startup time only.
-            docker compose up -d --no-deps --pull never app
-
-            # Wait up to 2 minutes for the container to become healthy
-            echo "Waiting for health check..."
-            for i in $(seq 1 12); do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' scheduler_app 2>/dev/null || echo "missing")
-              echo "  Check $i/12: $STATUS"
-              if [ "$STATUS" = "healthy" ]; then
-                echo "✅ Deployment successful — app is healthy"
-                break
-              fi
-              if [ "$i" -eq 12 ]; then
-                echo "❌ App did not become healthy after 120s"
-                docker compose logs app --tail=100
-                exit 1
-              fi
-              sleep 10
-            done
-
-            # Remove dangling images to reclaim disk space
+            docker compose up -d
+            
+            # Clean up
             docker image prune -f
