@@ -6,11 +6,13 @@ on:
     paths:
       - "scheduler-mycelium/**"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/deploy.yml"
   pull_request:
     branches: ["**"]
     paths:
       - "scheduler-mycelium/**"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/deploy.yml"
 
 jobs:
   build-and-test:
