@@ -13,8 +13,7 @@ WORKDIR /build
 # Copy Maven wrapper and pom first — Docker caches this layer if pom hasn't changed.
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-
-# Download dependencies only (cached layer — only re-runs when pom.xml changes).
+RUN chmod +x ./mvnw
 RUN ./mvnw dependency:go-offline -B -q
 
 # Copy source and build the application.
