@@ -20,7 +20,6 @@ services:
     image: postgres:16-alpine
     container_name: scheduler_db
     restart: always   # ← Changed from unless-stopped
-    env_file: .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -43,15 +42,15 @@ services:
     restart: always   # ← Changed from unless-stopped
     env_file: .env
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      WEBHOOK_BOOKING_CONFIRMED_URL: ${WEBHOOK_BOOKING_CONFIRMED_URL}
-      WEBHOOK_BOOKING_CANCELLED_URL: ${WEBHOOK_BOOKING_CANCELLED_URL}
+  - SPRING_PROFILES_ACTIVE=prod
+  - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/scheduler_mycelium
+  - SPRING_DATASOURCE_USERNAME=scheduler_user
+  - SPRING_DATASOURCE_PASSWORD=86yQ8NpDml6sOmgIZllUJ9RVGrUzCMDRAcG3NOWee4M=
+  - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+  - SPRING_JPA_HIBERNATE_DDL_AUTO=create
+  - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+  - WEBHOOK_BOOKING_CONFIRMED_URL=https://n8n.myceliumagency.cloud/webhook/email-confirmation
+  - WEBHOOK_BOOKING_CANCELLED_URL=https://n8n.myceliumagency.cloud/webhook/email-cancel
     ports:
       - "8080:8080"
     depends_on:
