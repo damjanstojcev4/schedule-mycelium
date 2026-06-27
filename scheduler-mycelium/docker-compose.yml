@@ -13,14 +13,13 @@
 #  On the very first deployment set SPRING_JPA_HIBERNATE_DDL_AUTO=create in
 #  .env, start once, then change it back to 'validate' and restart.
 # ─────────────────────────────────────────────────────────────────────────────
-
 services:
 
   # ── PostgreSQL ─────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: scheduler_db
-    restart: unless-stopped
+    restart: always   # ← Changed from unless-stopped
     env_file: .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -28,25 +27,23 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+    networks:
+      - app_network   # ← Optional, but keep it if you want
 
   # ── Spring Boot Application ────────────────────────────────────────────────
   app:
-    # ✅ FIX 1: Your actual GHCR image
     image: ghcr.io/damjanstojcev4/scheduler-mycelium:latest
     container_name: scheduler_app
-    restart: unless-stopped
+    restart: always   # ← Changed from unless-stopped
     env_file: .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      # ✅ FIX 2: Explicitly set all required variables
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -56,10 +53,7 @@ services:
       WEBHOOK_BOOKING_CONFIRMED_URL: ${WEBHOOK_BOOKING_CONFIRMED_URL}
       WEBHOOK_BOOKING_CANCELLED_URL: ${WEBHOOK_BOOKING_CANCELLED_URL}
     ports:
-      # ✅ FIX 3: Remove 127.0.0.1 so Nginx can reach it
       - "8080:8080"
-    networks:
-      - app_network
     depends_on:
       db:
         condition: service_healthy
@@ -69,6 +63,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    networks:
+      - app_network   # ← Optional, but keep it if you want
 
 # ── Volumes ──────────────────────────────────────────────────────────────────
 volumes:
