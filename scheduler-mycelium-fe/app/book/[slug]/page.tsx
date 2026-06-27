@@ -214,6 +214,7 @@ export default function BookingPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!slug) return;
     api
       .getBookingPage(slug)
       .then(setBusiness)

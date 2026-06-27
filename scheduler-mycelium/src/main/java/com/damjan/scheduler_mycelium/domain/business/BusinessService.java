@@ -305,4 +305,21 @@ public class BusinessService {
             accountRepository.delete(owner);
         }
     }
+
+    @Transactional
+    public BusinessResponseDTO updateBusiness(String slug, UpdateBusinessRequestDTO request, Authentication auth) {
+        Business business = businessRepository.findBySlug(slug)
+            .orElseThrow(() -> new BusinessNotFoundException(slug));
+
+        tenantGuard.assertOwner(business.getPublicId(), auth);
+
+        if (request.getName() != null) business.setName(request.getName());
+        if (request.getDescription() != null) business.setDescription(request.getDescription());
+        if (request.getPhone() != null) business.setPhone(request.getPhone());
+        if (request.getAddress() != null) business.setAddress(request.getAddress());
+        if (request.getCategory() != null) business.setCategory(request.getCategory());
+        if (request.getSoloOperator() != null) business.setSoloOperator(request.getSoloOperator());
+
+        return mapToBusinessResponse(businessRepository.save(business));
+    }
 }

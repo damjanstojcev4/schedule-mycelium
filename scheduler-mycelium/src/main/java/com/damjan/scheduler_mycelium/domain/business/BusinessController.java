@@ -7,6 +7,7 @@ import com.damjan.scheduler_mycelium.domain.business.dto.BusinessResponseDTO;
 import com.damjan.scheduler_mycelium.domain.business.dto.BusinessSettingsRequestDTO;
 import com.damjan.scheduler_mycelium.domain.business.dto.BusinessSettingsResponseDTO;
 import com.damjan.scheduler_mycelium.domain.business.dto.CreateBusinessRequestDTO;
+import com.damjan.scheduler_mycelium.domain.business.dto.UpdateBusinessRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -48,6 +49,14 @@ public class BusinessController {
     public ResponseEntity<BusinessResponseDTO> createBusiness(@Valid @RequestBody CreateBusinessRequestDTO request,
                                                               Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED).body(businessService.createBusiness(request, auth));
+    }
+
+    @PutMapping("/{slug}")
+    public ResponseEntity<BusinessResponseDTO> updateBusiness(
+            @PathVariable String slug,
+            @Valid @RequestBody UpdateBusinessRequestDTO request,
+            Authentication auth) {
+        return ResponseEntity.ok(businessService.updateBusiness(slug, request, auth));
     }
 
     @Operation(summary = "List all businesses")

@@ -94,6 +94,12 @@ public class SlotAvailabilityService {
                 LocalDateTime startDateTime = LocalDateTime.of(date, currentSlot);
                 LocalDateTime endDateTime = LocalDateTime.of(date, slotEnd);
 
+                // Skip slots that are already in the past (today's date only)
+                if (startDateTime.isBefore(LocalDateTime.now())) {
+                    currentSlot = currentSlot.plusMinutes(durationMinutes);
+                    continue;
+                }
+
                 if (!appointmentRepository.existsOverlappingAppointment(staffId, startDateTime, endDateTime)) {
                     availableSlots.add(currentSlot);
                 }
@@ -111,6 +117,10 @@ public class SlotAvailabilityService {
     }
 
     public boolean isSlotAvailable(Long staffId, LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime.isBefore(LocalDateTime.now())) {
+            return false;
+        }
+
         StaffMember staff = staffMemberRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
 

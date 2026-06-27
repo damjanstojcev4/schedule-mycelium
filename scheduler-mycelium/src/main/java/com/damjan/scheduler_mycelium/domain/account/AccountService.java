@@ -72,6 +72,7 @@ public class AccountService {
         );
     }
 
+    @Transactional(readOnly = true)
     public AuthResponseDTO login(LoginRequestDTO request) {
         Account account = accountRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));

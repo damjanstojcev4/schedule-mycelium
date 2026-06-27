@@ -59,6 +59,7 @@ public class BookingService {
         );
     }
 
+    @Transactional(readOnly = true)
     public AvailableSlotsResponseDTO getAvailableSlots(
             String slug,
             UUID staffPublicId,

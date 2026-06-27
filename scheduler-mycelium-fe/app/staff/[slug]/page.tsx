@@ -83,6 +83,7 @@ export default function StaffSchedulePage() {
   }, [auth, router]);
 
   useEffect(() => {
+    if (!slug) return;
     void (async () => {
       setLoading(true);
       setError('');

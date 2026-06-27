@@ -57,6 +57,7 @@ export default function DashboardStaffPage() {
   }
 
   useEffect(() => {
+    if (!slug) return;
     if (!businessPublicId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);

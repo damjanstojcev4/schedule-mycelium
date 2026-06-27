@@ -44,6 +44,7 @@ export default function DashboardServicesPage() {
   const [actionError, setActionError] = useState('');
 
   useEffect(() => {
+    if (!slug) return;
     if (!businessPublicId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);

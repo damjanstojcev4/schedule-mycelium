@@ -237,6 +237,7 @@ public class AppointmentService {
         return mapToAppointmentResponse(saved);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<AppointmentResponseDTO> getMyAppointments(Authentication auth) {
         UserDetailsServiceImpl.CustomUserDetails userDetails = (UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal();
         Long accountId = userDetails.getAccountId();

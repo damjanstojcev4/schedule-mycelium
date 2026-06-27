@@ -64,6 +64,7 @@ export default function DashboardOverviewPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!slug) return;
     // Fetch booking page to get soloOperator for sidebar
     api.getBookingPage(slug).then((biz: BusinessBookingPage) => {
       sessionStorage.setItem(`solo-${slug}`, String(biz.soloOperator));

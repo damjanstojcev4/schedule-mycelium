@@ -82,6 +82,7 @@ public class StaffMemberService {
         return sb.toString();
     }
 
+    @Transactional(readOnly = true)
     public List<StaffResponseDTO> getStaffByBusiness(UUID businessPublicId) {
         Business business = businessRepository.findByPublicId(businessPublicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
