@@ -39,22 +39,25 @@ services:
 
   # ── Spring Boot Application ────────────────────────────────────────────────
   app:
-    # In production the image is pulled from GHCR after the GitHub Actions
-    # deploy workflow builds and pushes it.
-    # For local builds use: docker compose build app
-    image: ${APP_IMAGE:-ghcr.io/YOUR_GITHUB_USERNAME/scheduler-mycelium:latest}
+    # ✅ FIX 1: Your actual GHCR image
+    image: ghcr.io/damjanstojcev4/scheduler-mycelium:latest
     container_name: scheduler_app
     restart: unless-stopped
     env_file: .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      # ✅ FIX 2: Explicitly set all required variables
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      WEBHOOK_BOOKING_CONFIRMED_URL: ${WEBHOOK_BOOKING_CONFIRMED_URL}
+      WEBHOOK_BOOKING_CANCELLED_URL: ${WEBHOOK_BOOKING_CANCELLED_URL}
     ports:
-      # Nginx on the host forwards 443 → 8080 inside the container.
-      # Only bind to localhost so 8080 is not publicly exposed.
-      - "127.0.0.1:8080:8080"
+      # ✅ FIX 3: Remove 127.0.0.1 so Nginx can reach it
+      - "8080:8080"
     networks:
       - app_network
     depends_on:
