@@ -5,13 +5,13 @@ services:
     container_name: scheduler_db
     restart: always
     environment:
-      POSTGRES_DB: scheduler_mycelium
-      POSTGRES_USER: scheduler_user
-      POSTGRES_PASSWORD: 86yQ8NpDml6sOmgIZllUJ9RVGrUzCMDRAcG3NOWee4M=
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U scheduler_user -d scheduler_mycelium"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,21 +24,21 @@ services:
     container_name: scheduler_app
     restart: always
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/scheduler_mycelium
-      - SPRING_DATASOURCE_USERNAME=scheduler_user
-      - SPRING_DATASOURCE_PASSWORD=86yQ8NpDml6sOmgIZllUJ9RVGrUzCMDRAcG3NOWee4M=
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-validate}
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
-      - JWT_SECRET=68548f1aa602bfa77c8802a53b4a07e9fe601e7b61317d8a775c52c0f17cb072cf052a345aa81cfa5e64ea6842baa7f13b1ce03f61e27262ca64a67e7e2fd709
-      - JWT_EXPIRATION_MS=86400000
-      - CORS_ALLOWED_ORIGINS=https://schedule-mycelium.vercel.app,http://localhost:3000
-      - WEBHOOK_BOOKING_CONFIRMED_URL=https://n8n.myceliumagency.cloud/webhook/email-confirmation
-      - WEBHOOK_BOOKING_CANCELLED_URL=https://n8n.myceliumagency.cloud/webhook/email-cancel
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION_MS=${JWT_EXPIRATION_MS:-86400000}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - WEBHOOK_BOOKING_CONFIRMED_URL=${WEBHOOK_BOOKING_CONFIRMED_URL}
+      - WEBHOOK_BOOKING_CANCELLED_URL=${WEBHOOK_BOOKING_CANCELLED_URL}
       - SERVER_ADDRESS=0.0.0.0
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
