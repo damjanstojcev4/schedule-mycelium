@@ -42,6 +42,7 @@ public class ServiceService {
         return mapToServiceResponse(service);
     }
 
+    @Transactional(readOnly = true)
     public List<ServiceResponseDTO> getActiveServices(UUID businessPublicId) {
         Business business = businessRepository.findByPublicId(businessPublicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
@@ -52,6 +53,7 @@ public class ServiceService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ServiceResponseDTO> getAllServices(UUID businessPublicId, Authentication auth) {
         tenantGuard.assertOwner(businessPublicId, auth);
 

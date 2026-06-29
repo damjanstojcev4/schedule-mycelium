@@ -20,6 +20,7 @@ const CATEGORIES = [
   'Dentist',
   'Massage',
   'Trainer',
+  'Make Up Studio',
 ];
 
 export default function AdminBusinessesPage() {
@@ -165,7 +166,7 @@ export default function AdminBusinessesPage() {
             <tbody className="divide-y divide-gray-100">
               {businesses.map((b) => (
                 <tr key={b.publicId} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-4 font-semibold text-gray-900">
+                  <td className="px-5 py-4 align-middle whitespace-nowrap font-semibold text-gray-900">
                     <Link
                       href={`/book/${b.slug}`}
                       target="_blank"
@@ -174,19 +175,19 @@ export default function AdminBusinessesPage() {
                       {b.name}
                     </Link>
                   </td>
-                  <td className="px-5 py-4 text-gray-500 font-mono text-xs">{b.slug}</td>
-                  <td className="px-5 py-4">
+                  <td className="px-5 py-4 align-middle whitespace-nowrap text-gray-500 font-mono text-xs">{b.slug}</td>
+                  <td className="px-5 py-4 align-middle whitespace-nowrap">
                     <TextBadge label={b.category} variant="default" />
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-5 py-4 align-middle whitespace-nowrap">
                     {b.soloOperator ? (
                       <TextBadge label="Solo" variant="blue" />
                     ) : (
                       <TextBadge label="Team" variant="default" />
                     )}
                   </td>
-                  <td className="px-5 py-4 text-gray-400 text-xs">{formatDate(b.createdAt)}</td>
-                  <td className="px-5 py-4">
+                  <td className="px-5 py-4 align-middle whitespace-nowrap text-gray-400 text-xs">{formatDate(b.createdAt)}</td>
+                  <td className="px-5 py-4 align-middle whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => setBusinessToDelete({ publicId: b.publicId, name: b.name })}

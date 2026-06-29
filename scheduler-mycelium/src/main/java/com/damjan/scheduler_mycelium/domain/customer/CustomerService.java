@@ -15,6 +15,7 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
 
+    @Transactional(readOnly = true)
     public CustomerResponseDTO getMyProfile(Authentication auth) {
         Long accountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
 

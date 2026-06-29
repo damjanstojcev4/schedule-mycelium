@@ -3,6 +3,7 @@ package com.damjan.scheduler_mycelium.config;
 import com.damjan.scheduler_mycelium.security.JwtAuthFilter;
 import com.damjan.scheduler_mycelium.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -62,6 +63,11 @@ public class SecurityConfig {
                 .permissionsPolicy(perms -> perms
                     .policy("camera=(), microphone=(), geolocation=()"))
             )
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
+                })
+            )
 
             .authorizeHttpRequests(auth -> auth
 
@@ -90,6 +96,9 @@ public class SecurityConfig {
 
                 // ── Actuator health (Docker & load balancer probes) ────────
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+
+                // ── Error page (Spring Boot default error handling) ────────
+                .requestMatchers("/error").permitAll()
 
                 // ── Admin (SUPER_ADMIN only) ───────────────────────────────
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_SUPER_ADMIN")

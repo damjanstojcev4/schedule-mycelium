@@ -88,7 +88,7 @@ export default function StaffSchedulePage() {
       setLoading(true);
       setError('');
       try {
-        const appts = await api.getStaffSchedule(slug, selectedDate);
+        const appts = await api.getStaffAppointmentsByDate(slug, selectedDate);
         const now = new Date().getTime();
         const autoCompleted = appts.map((appt) => {
           if (appt.status === 'BOOKED' && new Date(appt.endTime).getTime() <= now) {

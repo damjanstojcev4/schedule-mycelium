@@ -18,6 +18,7 @@ const CATEGORIES = [
   'Dentist',
   'Massage',
   'Trainer',
+  'Make Up Studio',
 ];
 
 export default function LandingPage() {

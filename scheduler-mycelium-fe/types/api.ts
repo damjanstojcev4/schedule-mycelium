@@ -179,3 +179,48 @@ export interface BookingConfirmation {
   guestName: string;
   guestEmail: string;
 }
+
+export interface StaffScheduleEntry {
+  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  isWorking: boolean;
+  workStart: string | null;
+  workEnd: string | null;
+  breakStart: string | null;
+  breakEnd: string | null;
+}
+
+export interface StaffScheduleResponseDTO {
+  staffPublicId: string;
+  staffName: string;
+  schedule: StaffScheduleEntry[];
+}
+
+export interface UpdateStaffScheduleRequest {
+  schedule: StaffScheduleEntry[];
+}
+
+export interface TimeBlockResponse {
+  publicId: string;
+  blockDate: string;
+  startTime: string;
+  endTime: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface CreateTimeBlockRequest {
+  blockDate: string;
+  startTime: string;
+  endTime: string;
+  reason?: string;
+}
+
+export interface OwnerBookAppointmentRequest {
+  servicePublicId: string;
+  staffPublicId: string | null;
+  startTime: string;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  notes?: string;
+}

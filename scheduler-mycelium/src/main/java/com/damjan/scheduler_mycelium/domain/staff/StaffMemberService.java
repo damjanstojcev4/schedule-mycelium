@@ -29,6 +29,7 @@ public class StaffMemberService {
     private final AccountRepository accountRepository;
     private final TenantGuard tenantGuard;
     private final PasswordEncoder passwordEncoder;
+    private final com.damjan.scheduler_mycelium.domain.staff.StaffScheduleRepository staffScheduleRepository;
 
     @Transactional
     public StaffResponseDTO addStaff(UUID businessPublicId, CreateStaffRequestDTO request, Authentication auth) {
@@ -70,6 +71,22 @@ public class StaffMemberService {
         staff.setBreakEnd(request.getBreakEnd());
 
         staff = staffMemberRepository.save(staff);
+
+        for (java.time.DayOfWeek day : java.time.DayOfWeek.values()) {
+            com.damjan.scheduler_mycelium.domain.staff.StaffSchedule schedule = new com.damjan.scheduler_mycelium.domain.staff.StaffSchedule();
+            schedule.setStaffMember(staff);
+            schedule.setDayOfWeek(day);
+            if (day == java.time.DayOfWeek.SUNDAY || day == java.time.DayOfWeek.SATURDAY) {
+                schedule.setIsWorking(false);
+            } else {
+                schedule.setIsWorking(true);
+                schedule.setWorkStart(request.getWorkStart() != null ? request.getWorkStart() : java.time.LocalTime.of(9, 0));
+                schedule.setWorkEnd(request.getWorkEnd() != null ? request.getWorkEnd() : java.time.LocalTime.of(17, 0));
+                schedule.setBreakStart(request.getBreakStart());
+                schedule.setBreakEnd(request.getBreakEnd());
+            }
+            staffScheduleRepository.save(schedule);
+        }
 
         return mapToStaffResponse(staff, tempPassword);
     }

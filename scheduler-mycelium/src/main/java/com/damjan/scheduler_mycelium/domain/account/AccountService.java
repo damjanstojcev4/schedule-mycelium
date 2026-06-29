@@ -149,6 +149,7 @@ public class AccountService {
         return null;
     }
 
+    @Transactional(readOnly = true)
     public List<AdminAccountResponseDTO> getAllAccountsForAdmin() {
         return accountRepository.findAll().stream()
                 .map(account -> new AdminAccountResponseDTO(

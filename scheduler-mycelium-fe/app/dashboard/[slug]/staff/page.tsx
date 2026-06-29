@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
-import type { StaffMember } from '@/types/api';
+import type { StaffMember, StaffScheduleEntry, StaffScheduleResponseDTO } from '@/types/api';
 
 interface StaffFormState {
   email: string;
@@ -32,22 +32,44 @@ const emptyForm: StaffFormState = {
   breakEnd: '',
 };
 
+const DEFAULT_SCHEDULE: StaffScheduleEntry[] = [
+  'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'
+].map(day => ({
+  dayOfWeek: day as any,
+  isWorking: !['SATURDAY', 'SUNDAY'].includes(day),
+  workStart: '09:00',
+  workEnd: '17:00',
+  breakStart: null,
+  breakEnd: null
+}));
+
 export default function DashboardStaffPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const { auth } = useAuth();
 
   const [businessPublicId, setBusinessPublicId] = useState<string | null>(auth?.businessPublicId || null);
+  const [soloOperator, setSoloOperator] = useState(false);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Add Staff Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<StaffFormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  // Shown once after creating a new account for a staff member
+  
   const [newCredentials, setNewCredentials] = useState<{ email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Details Modal
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [schedule, setSchedule] = useState<StaffScheduleEntry[]>([]);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduleSuccess, setScheduleSuccess] = useState('');
 
   async function copyPassword() {
     if (!newCredentials) return;
@@ -58,8 +80,10 @@ export default function DashboardStaffPage() {
 
   useEffect(() => {
     if (!slug) return;
+    const raw = sessionStorage.getItem(`solo-${slug}`);
+    if (raw === 'true') setSoloOperator(true);
+
     if (!businessPublicId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
       api
         .getBookingPage(slug)
@@ -118,7 +142,6 @@ export default function DashboardStaffPage() {
       setStaff((prev) => [...prev, created]);
       closeModal();
 
-      // If the backend auto-created a new account, show the one-time credentials
       if (created.tempPassword) {
         setNewCredentials({ email: created.email, password: created.tempPassword });
       } else {
@@ -131,31 +154,85 @@ export default function DashboardStaffPage() {
     }
   }
 
-  async function handleRemove(member: StaffMember) {
+  async function handleRemove(member: StaffMember, e: React.MouseEvent) {
+    e.stopPropagation();
     if (!businessPublicId) return;
     if (!confirm(`Remove ${member.name} from this business?`)) return;
     try {
       await api.removeStaff(businessPublicId, member.publicId);
       setStaff((prev) => prev.filter((s) => s.publicId !== member.publicId));
-      window.location.reload();
+      if (selectedStaff?.publicId === member.publicId) {
+        setSelectedStaff(null);
+      }
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Failed to remove staff.');
+    }
+  }
+
+  async function openStaffDetails(member: StaffMember) {
+    setSelectedStaff(member);
+    setScheduleError('');
+    setScheduleSuccess('');
+    setScheduleLoading(true);
+    if (!businessPublicId) return;
+    
+    try {
+      const res = await api.getStaffSchedule(businessPublicId, member.publicId);
+      // Backend might return empty if not created yet, so fallback to default
+      if (res && res.schedule && res.schedule.length === 7) {
+        setSchedule(res.schedule);
+      } else {
+        setSchedule(JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)));
+      }
+    } catch (err: any) {
+      // If 404, we can assume no schedule exists and provide defaults
+      if (err.status === 404) {
+        setSchedule(JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)));
+      } else {
+        setScheduleError(err.message || 'Failed to load schedule');
+      }
+    } finally {
+      setScheduleLoading(false);
+    }
+  }
+
+  function updateScheduleDay(index: number, field: keyof StaffScheduleEntry, value: any) {
+    const updated = [...schedule];
+    updated[index] = { ...updated[index], [field]: value };
+    setSchedule(updated);
+  }
+
+  async function handleSaveSchedule() {
+    if (!businessPublicId || !selectedStaff) return;
+    setScheduleSaving(true);
+    setScheduleError('');
+    setScheduleSuccess('');
+    try {
+      await api.updateStaffSchedule(businessPublicId, selectedStaff.publicId, {
+        schedule
+      });
+      setScheduleSuccess('Schedule updated successfully!');
+    } catch (err: any) {
+      setScheduleError(err.message || 'Failed to save schedule');
+    } finally {
+      setScheduleSaving(false);
     }
   }
 
   return (
     <div>
       <PageHeader
-        title="Staff"
-        description="Manage the team members at your business."
+        title={soloOperator ? "Working Hours" : "Staff"}
+        description={soloOperator ? "Manage your weekly schedule and working hours." : "Manage the team members at your business."}
         action={
-          <Button id="add-staff-btn" onClick={openAdd}>
-            + Add Staff
-          </Button>
+          !soloOperator && (
+            <Button id="add-staff-btn" onClick={openAdd}>
+              + Add Staff
+            </Button>
+          )
         }
       />
 
-      {/* One-time credentials banner */}
       {newCredentials && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
           <div className="flex items-start justify-between gap-4">
@@ -184,7 +261,6 @@ export default function DashboardStaffPage() {
               type="button"
               onClick={() => {
                 setNewCredentials(null);
-                window.location.reload();
               }}
               className="shrink-0 rounded-lg p-1 text-amber-600 hover:bg-amber-100 transition-colors"
               aria-label="Dismiss"
@@ -220,7 +296,11 @@ export default function DashboardStaffPage() {
       {!loading && staff.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
           {staff.map((member) => (
-            <div key={member.publicId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4">
+            <div 
+              key={member.publicId} 
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+              onClick={() => openStaffDetails(member)}
+            >
               <div className="flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-black shrink-0">
                   {member.name.charAt(0).toUpperCase()}
@@ -230,29 +310,116 @@ export default function DashboardStaffPage() {
                   <p className="font-medium text-gray-900">{member.name}</p>
                   <p className="text-sm text-gray-500">{member.roleTitle}</p>
                   <p className="text-xs text-gray-400">
-                    {member.email} · {member.workStart} – {member.workEnd}
-                    {member.breakStart && member.breakEnd
-                      ? ` · Break ${member.breakStart}–${member.breakEnd}`
-                      : ''}
+                    {member.email}
                   </p>
                 </div>
               </div>
 
               <div className="flex justify-end shrink-0">
-                <Button
-                  id={`remove-staff-${member.publicId}`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemove(member)}
-                  className="text-gray-400 hover:text-red-600 shrink-0"
-                >
-                  Remove
-                </Button>
+                {!soloOperator && (
+                  <Button
+                    id={`remove-staff-${member.publicId}`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleRemove(member, e)}
+                    className="text-gray-400 hover:text-red-600 shrink-0"
+                  >
+                    Remove
+                  </Button>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Details Modal */}
+      <Modal isOpen={!!selectedStaff} onClose={() => setSelectedStaff(null)} title={selectedStaff?.name || 'Staff Details'}>
+        {selectedStaff && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Basic Info</h3>
+              <p className="text-sm text-gray-500 mt-1">{selectedStaff.roleTitle} &middot; {selectedStaff.email}</p>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <h3 className="text-sm font-medium text-gray-900 mb-4">Weekly Schedule</h3>
+              
+              {scheduleLoading ? (
+                <div className="flex justify-center py-6"><Spinner className="h-6 w-6 text-gray-900" /></div>
+              ) : (
+                <div className="space-y-3">
+                  {scheduleError && <div className="text-sm text-red-600">{scheduleError}</div>}
+                  {scheduleSuccess && <div className="text-sm text-green-600">{scheduleSuccess}</div>}
+                  
+                  {schedule.map((entry, index) => (
+                    <div key={entry.dayOfWeek} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="w-28 shrink-0 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={entry.isWorking}
+                          onChange={(e) => updateScheduleDay(index, 'isWorking', e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                        />
+                        <span className="text-sm font-medium text-gray-700 capitalize">
+                          {entry.dayOfWeek.toLowerCase()}
+                        </span>
+                      </div>
+                      
+                      {entry.isWorking ? (
+                        <div className="flex flex-1 flex-wrap items-center gap-2">
+                          <input
+                            type="time"
+                            value={entry.workStart || ''}
+                            onChange={(e) => updateScheduleDay(index, 'workStart', e.target.value)}
+                            className="block w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-black focus:ring-black"
+                          />
+                          <span className="text-sm text-gray-500">-</span>
+                          <input
+                            type="time"
+                            value={entry.workEnd || ''}
+                            onChange={(e) => updateScheduleDay(index, 'workEnd', e.target.value)}
+                            className="block w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-black focus:ring-black"
+                          />
+                          
+                          <div className="flex items-center gap-2 ml-auto">
+                            <span className="text-xs text-gray-400">Break:</span>
+                            <input
+                              type="time"
+                              value={entry.breakStart || ''}
+                              onChange={(e) => updateScheduleDay(index, 'breakStart', e.target.value)}
+                              className="block w-22 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-500 focus:border-black focus:ring-black"
+                            />
+                            <span className="text-xs text-gray-400">-</span>
+                            <input
+                              type="time"
+                              value={entry.breakEnd || ''}
+                              onChange={(e) => updateScheduleDay(index, 'breakEnd', e.target.value)}
+                              className="block w-22 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-500 focus:border-black focus:ring-black"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-400 italic">Not working</div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <div className="pt-4 flex justify-end">
+                    <Button
+                      loading={scheduleSaving}
+                      onClick={handleSaveSchedule}
+                      className="px-6"
+                    >
+                      Save Schedule
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Add Staff Modal */}
       <Modal isOpen={modalOpen} onClose={closeModal} title="Add Staff Member">

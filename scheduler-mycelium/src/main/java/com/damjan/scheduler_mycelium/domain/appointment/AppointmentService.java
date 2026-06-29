@@ -3,7 +3,9 @@ package com.damjan.scheduler_mycelium.domain.appointment;
 import com.damjan.scheduler_mycelium.domain.account.Account;
 import com.damjan.scheduler_mycelium.domain.appointment.dto.AppointmentResponseDTO;
 import com.damjan.scheduler_mycelium.domain.appointment.dto.BookAppointmentRequestDTO;
+import com.damjan.scheduler_mycelium.domain.appointment.dto.OwnerBookAppointmentRequestDTO;
 import com.damjan.scheduler_mycelium.domain.business.Business;
+import com.damjan.scheduler_mycelium.domain.business.BusinessRepository;
 import com.damjan.scheduler_mycelium.domain.business.BusinessSettings;
 import com.damjan.scheduler_mycelium.domain.business.BusinessSettingsRepository;
 import com.damjan.scheduler_mycelium.domain.customer.Customer;
@@ -35,6 +37,7 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final CustomerRepository customerRepository;
     private final ServiceRepository serviceRepository;
+    private final BusinessRepository businessRepository;
     private final StaffMemberRepository staffMemberRepository;
     private final BusinessSettingsRepository businessSettingsRepository;
     private final SlotAvailabilityService slotAvailabilityService;
@@ -130,6 +133,67 @@ public class AppointmentService {
 
         Appointment saved = appointmentRepository.save(appointment);
         webhookService.sendBookingConfirmation(saved);
+        return mapToAppointmentResponse(saved);
+    }
+
+    @Transactional
+    public AppointmentResponseDTO createOwnerAppointment(
+            String businessSlug,
+            OwnerBookAppointmentRequestDTO request,
+            Authentication auth) {
+
+        Business business = businessRepository.findBySlug(businessSlug)
+                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
+
+        tenantGuard.assertOwner(business.getPublicId(), auth);
+
+        Service service = serviceRepository.findByPublicId(request.getServicePublicId())
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+
+        if (!service.getBusiness().getId().equals(business.getId())) {
+            throw new IllegalArgumentException("Service does not belong to this business");
+        }
+
+        StaffMember staff;
+        if (request.getStaffPublicId() != null) {
+            staff = staffMemberRepository.findByPublicId(request.getStaffPublicId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff member not found"));
+            if (!staff.getBusiness().getId().equals(business.getId())) {
+                throw new IllegalArgumentException("Staff member does not belong to this business");
+            }
+        } else {
+            // Find the owner's staff record (for solo operator)
+            Long ownerAccountId = ((UserDetailsServiceImpl.CustomUserDetails) auth.getPrincipal()).getAccountId();
+            staff = staffMemberRepository.findByAccountId(ownerAccountId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff profile for owner not found"));
+        }
+
+        LocalDateTime startTime = request.getStartTime();
+        LocalDateTime endTime = startTime.plusMinutes(service.getDurationMinutes());
+
+        if (!slotAvailabilityService.isSlotAvailable(staff.getId(), startTime, endTime)) {
+            throw new SlotNotAvailableException("The requested slot is not available");
+        }
+
+        Appointment appointment = new Appointment();
+        appointment.setBusiness(business);
+        appointment.setStaffMember(staff);
+        appointment.setCustomer(null);
+        appointment.setGuestName(request.getCustomerName());
+        appointment.setGuestEmail(request.getCustomerEmail());
+        appointment.setGuestPhone(request.getCustomerPhone());
+        appointment.setService(service);
+        appointment.setStartTime(startTime);
+        appointment.setEndTime(endTime);
+        appointment.setStatus(Appointment.Status.BOOKED);
+        appointment.setNotes(request.getNotes());
+
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        if (request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank()) {
+            webhookService.sendBookingConfirmation(saved);
+        }
+        
         return mapToAppointmentResponse(saved);
     }
 
@@ -257,10 +321,13 @@ public class AppointmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("Staff profile not found"));
             appointments = appointmentRepository.findByStaffMemberId(staff.getId());
         } else if (role.equals("ROLE_BUSINESS_OWNER")) {
-            // For now, return all appointments across their businesses, or just empty if not fully implemented
-            appointments = appointmentRepository.findAll().stream()
-                .filter(a -> a.getBusiness().getOwner().getId().equals(accountId))
-                .collect(Collectors.toList());
+            List<Business> businesses = businessRepository.findByOwnerId(accountId);
+            List<Long> businessIds = businesses.stream().map(Business::getId).collect(Collectors.toList());
+            if (businessIds.isEmpty()) {
+                appointments = List.of();
+            } else {
+                appointments = appointmentRepository.findByBusinessIdIn(businessIds);
+            }
         } else {
             throw new AccessDeniedException("Unknown role");
         }
@@ -270,6 +337,7 @@ public class AppointmentService {
                 .collect(Collectors.toList());
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public AppointmentResponseDTO getAppointmentByPublicId(UUID publicId, Authentication auth) {
         Appointment appointment = appointmentRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
@@ -300,6 +368,7 @@ public class AppointmentService {
         return mapToAppointmentResponse(appointment);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<AppointmentResponseDTO> getAllAppointments() {
         return appointmentRepository.findAll().stream()
                 .map(this::mapToAppointmentResponse)

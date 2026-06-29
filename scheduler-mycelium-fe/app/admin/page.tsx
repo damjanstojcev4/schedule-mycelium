@@ -176,17 +176,17 @@ export default function SuperAdminDashboard() {
                     <tbody className="divide-y divide-gray-100">
                       {businessStats.map((biz) => (
                         <tr key={biz.publicId} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4 font-semibold text-gray-900">{biz.name}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 align-middle whitespace-nowrap font-semibold text-gray-900">{biz.name}</td>
+                          <td className="px-6 py-4 align-middle whitespace-nowrap">
                             <TextBadge label={biz.category} variant="default" />
                           </td>
-                          <td className="px-6 py-4 font-medium text-gray-900">{biz.totalBookings}</td>
-                          <td className="px-6 py-4 text-gray-500">
+                          <td className="px-6 py-4 align-middle whitespace-nowrap font-medium text-gray-900">{biz.totalBookings}</td>
+                          <td className="px-6 py-4 align-middle whitespace-nowrap text-gray-500">
                             <span className="text-emerald-600 font-semibold">{biz.completed}</span>
                             {' / '}
                             <span className="text-red-500 font-semibold">{biz.cancelled}</span>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 align-middle whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <div className="w-16 bg-gray-100 rounded-full h-1.5">
                                 <div

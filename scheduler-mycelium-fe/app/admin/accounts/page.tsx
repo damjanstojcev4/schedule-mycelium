@@ -82,14 +82,14 @@ export default function AdminAccountsPage() {
             <tbody className="divide-y divide-gray-100">
               {filtered.map((acc) => (
                 <tr key={acc.publicId} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 text-gray-900">{acc.email}</td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-900">{acc.email}</td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap">
                     <TextBadge
                       label={acc.role.replace('_', ' ')}
                       variant={roleBadgeVariant[acc.role] ?? 'default'}
                     />
                   </td>
-                  <td className="px-5 py-3.5 text-gray-400 text-xs">{formatDate(acc.createdAt)}</td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-400 text-xs">{formatDate(acc.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

@@ -19,6 +19,11 @@ import type {
   StaffMember,
   UpdateBusinessRequest,
   UpdateServiceRequest,
+  StaffScheduleResponseDTO,
+  UpdateStaffScheduleRequest,
+  TimeBlockResponse,
+  CreateTimeBlockRequest,
+  OwnerBookAppointmentRequest,
 } from '@/types/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -144,6 +149,13 @@ export const api = {
   cancelMyAppointment: (publicId: string) =>
     request<void>(`/api/appointments/${publicId}/cancel`, { method: 'PATCH' }),
 
+  ownerBookAppointment: (slug: string, body: OwnerBookAppointmentRequest) =>
+    request<Appointment>(
+        `/api/businesses/${slug}/owner-booking`,
+        { method: 'POST', body: JSON.stringify(body) },
+        true
+    ),
+
   // ─── Dashboard — Appointments ───────────────────────────────────────────────
 
   getDashboardAppointments: () =>
@@ -205,6 +217,43 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // ─── Staff Schedule & Time Blocks ───────────────────────────────────────────
+
+  getStaffSchedule: (businessPublicId: string, staffPublicId: string) =>
+    request<StaffScheduleResponseDTO>(
+        `/api/businesses/${businessPublicId}/staff/${staffPublicId}/schedule`,
+        {},
+        true
+    ),
+
+  updateStaffSchedule: (businessPublicId: string, staffPublicId: string, body: UpdateStaffScheduleRequest) =>
+    request<StaffScheduleResponseDTO>(
+        `/api/businesses/${businessPublicId}/staff/${staffPublicId}/schedule`,
+        { method: 'PUT', body: JSON.stringify(body) },
+        true
+    ),
+
+  getTimeBlocks: (businessPublicId: string, staffPublicId: string, date: string) =>
+    request<TimeBlockResponse[]>(
+        `/api/businesses/${businessPublicId}/staff/${staffPublicId}/blocks?date=${date}`,
+        {},
+        true
+    ),
+
+  createTimeBlock: (businessPublicId: string, staffPublicId: string, body: CreateTimeBlockRequest) =>
+    request<TimeBlockResponse>(
+        `/api/businesses/${businessPublicId}/staff/${staffPublicId}/blocks`,
+        { method: 'POST', body: JSON.stringify(body) },
+        true
+    ),
+
+  deleteTimeBlock: (businessPublicId: string, staffPublicId: string, blockPublicId: string) =>
+    request<void>(
+        `/api/businesses/${businessPublicId}/staff/${staffPublicId}/blocks/${blockPublicId}`,
+        { method: 'DELETE' },
+        true
+    ),
+
   // ─── Dashboard — Settings ───────────────────────────────────────────────────
 
   getSettings: (businessPublicId: string) =>
@@ -218,7 +267,7 @@ export const api = {
 
   // ─── Staff View ─────────────────────────────────────────────────────────────
 
-  getStaffSchedule: (slug: string, date: string) => {
+  getStaffAppointmentsByDate: (slug: string, date: string) => {
     const query = new URLSearchParams({ date });
     return request<Appointment[]>(`/api/staff/${slug}/appointments?${query}`);
   },

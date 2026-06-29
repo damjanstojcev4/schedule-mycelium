@@ -79,15 +79,15 @@ export default function AdminAppointmentsPage() {
             <tbody className="divide-y divide-gray-100">
               {filtered.map((appt) => (
                 <tr key={appt.publicId} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 whitespace-nowrap">
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap">
                     <p className="font-medium text-gray-900">{formatDate(appt.startTime)}</p>
                     <p className="text-xs text-gray-400">{formatTime(appt.startTime)}–{formatTime(appt.endTime)}</p>
                   </td>
-                  <td className="px-5 py-3.5 text-gray-700">{appt.serviceName}</td>
-                  <td className="px-5 py-3.5 text-gray-700">{appt.customerName}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{appt.staffName}</td>
-                  <td className="px-5 py-3.5 text-gray-400 font-mono text-xs">{appt.businessId}</td>
-                  <td className="px-5 py-3.5"><Badge status={appt.status} /></td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-700">{appt.serviceName}</td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-700">{appt.customerName}</td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-500">{appt.staffName}</td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-400 font-mono text-xs">{appt.businessId}</td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap"><Badge status={appt.status} /></td>
                 </tr>
               ))}
             </tbody>

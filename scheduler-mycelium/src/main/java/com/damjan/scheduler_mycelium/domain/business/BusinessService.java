@@ -36,6 +36,7 @@ public class BusinessService {
     private final AppointmentRepository appointmentRepository;
     private final ServiceRepository serviceRepository;
     private final StaffDayOffRepository staffDayOffRepository;
+    private final com.damjan.scheduler_mycelium.domain.staff.StaffScheduleRepository staffScheduleRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantGuard tenantGuard;
     private final CustomerRepository customerRepository;
@@ -73,23 +74,40 @@ public class BusinessService {
             ownerAsStaff.setName(owner.getEmail());
             ownerAsStaff.setWorkStart(LocalTime.of(9, 0));
             ownerAsStaff.setWorkEnd(LocalTime.of(17, 0));
-            staffMemberRepository.save(ownerAsStaff);
+            ownerAsStaff = staffMemberRepository.save(ownerAsStaff);
+
+            for (java.time.DayOfWeek day : java.time.DayOfWeek.values()) {
+                com.damjan.scheduler_mycelium.domain.staff.StaffSchedule schedule = new com.damjan.scheduler_mycelium.domain.staff.StaffSchedule();
+                schedule.setStaffMember(ownerAsStaff);
+                schedule.setDayOfWeek(day);
+                if (day == java.time.DayOfWeek.SUNDAY) {
+                    schedule.setIsWorking(false);
+                } else {
+                    schedule.setIsWorking(true);
+                    schedule.setWorkStart(LocalTime.of(9, 0));
+                    schedule.setWorkEnd(LocalTime.of(17, 0));
+                }
+                staffScheduleRepository.save(schedule);
+            }
         }
 
         return mapToBusinessResponse(business);
     }
 
+    @Transactional(readOnly = true)
     public BusinessResponseDTO getBusinessByPublicId(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + publicId));
         return mapToBusinessResponse(business);
     }
 
+    @Transactional(readOnly = true)
     public Business getBusinessEntityBySlug(String slug) {
         return businessRepository.findBySlug(slug)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with slug: " + slug));
     }
 
+    @Transactional(readOnly = true)
     public List<BusinessResponseDTO> getAllBusinesses() {
         return businessRepository.findAll().stream()
                 .map(this::mapToBusinessResponse)
@@ -156,6 +174,7 @@ public class BusinessService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<BusinessClosureResponseDTO> getClosures(UUID businessPublicId) {
         Business business = businessRepository.findByPublicId(businessPublicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found with publicId: " + businessPublicId));
@@ -241,7 +260,21 @@ public class BusinessService {
             ownerAsStaff.setName(owner.getEmail());
             ownerAsStaff.setWorkStart(LocalTime.of(9, 0));
             ownerAsStaff.setWorkEnd(LocalTime.of(17, 0));
-            staffMemberRepository.save(ownerAsStaff);
+            ownerAsStaff = staffMemberRepository.save(ownerAsStaff);
+
+            for (java.time.DayOfWeek day : java.time.DayOfWeek.values()) {
+                com.damjan.scheduler_mycelium.domain.staff.StaffSchedule schedule = new com.damjan.scheduler_mycelium.domain.staff.StaffSchedule();
+                schedule.setStaffMember(ownerAsStaff);
+                schedule.setDayOfWeek(day);
+                if (day == java.time.DayOfWeek.SUNDAY) {
+                    schedule.setIsWorking(false);
+                } else {
+                    schedule.setIsWorking(true);
+                    schedule.setWorkStart(LocalTime.of(9, 0));
+                    schedule.setWorkEnd(LocalTime.of(17, 0));
+                }
+                staffScheduleRepository.save(schedule);
+            }
         }
 
         return mapToBusinessResponse(business);
@@ -258,10 +291,11 @@ public class BusinessService {
         // 1. Delete appointments
         appointmentRepository.deleteAll(appointmentRepository.findByBusinessId(businessId));
 
-        // 2. Delete staff days off and staff members
+        // 2. Delete staff schedules, staff days off, and staff members
         List<StaffMember> staffMembers = staffMemberRepository.findByBusinessId(businessId);
         for (StaffMember staff : staffMembers) {
             staffDayOffRepository.deleteAll(staffDayOffRepository.findByStaffMemberId(staff.getId()));
+            staffScheduleRepository.deleteAll(staffScheduleRepository.findByStaffMemberIdOrderByDayOfWeek(staff.getId()));
         }
         staffMemberRepository.deleteAll(staffMembers);
 

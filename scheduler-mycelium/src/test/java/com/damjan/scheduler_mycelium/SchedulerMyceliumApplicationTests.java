@@ -20,11 +20,11 @@ import org.springframework.test.context.TestPropertySource;
         "jwt.secret=this-is-a-test-secret-that-is-at-least-32-chars-long",
         "jwt.expiration-ms=86400000",
         // Point to a test DB. Override with SPRING_DATASOURCE_URL in CI.
-        "spring.datasource.url=jdbc:postgresql://localhost:5432/schedule_test",
+        "spring.datasource.url=jdbc:postgresql://localhost:5432/schedule",
         "spring.datasource.username=postgres",
-        "spring.datasource.password=postgres",
+        "spring.datasource.password=6220",
         // Allow Hibernate to create the schema for tests (no Flyway needed)
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         // Suppress SQL noise in test output
         "spring.jpa.show-sql=false",
         // CORS can point anywhere in tests
