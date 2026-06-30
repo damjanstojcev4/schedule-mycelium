@@ -371,14 +371,20 @@ export default function DashboardStaffPage() {
                           <input
                             type="time"
                             value={entry.workStart || ''}
-                            onChange={(e) => updateScheduleDay(index, 'workStart', e.target.value)}
+                            onChange={(e) => {
+                              updateScheduleDay(index, 'workStart', e.target.value);
+                              e.target.blur();
+                            }}
                             className="block w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-black focus:ring-black"
                           />
                           <span className="text-sm text-gray-500">-</span>
                           <input
                             type="time"
                             value={entry.workEnd || ''}
-                            onChange={(e) => updateScheduleDay(index, 'workEnd', e.target.value)}
+                            onChange={(e) => {
+                              updateScheduleDay(index, 'workEnd', e.target.value);
+                              e.target.blur();
+                            }}
                             className="block w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-black focus:ring-black"
                           />
                           
@@ -387,14 +393,20 @@ export default function DashboardStaffPage() {
                             <input
                               type="time"
                               value={entry.breakStart || ''}
-                              onChange={(e) => updateScheduleDay(index, 'breakStart', e.target.value)}
+                              onChange={(e) => {
+                                updateScheduleDay(index, 'breakStart', e.target.value);
+                                e.target.blur();
+                              }}
                               className="block w-22 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-500 focus:border-black focus:ring-black"
                             />
                             <span className="text-xs text-gray-400">-</span>
                             <input
                               type="time"
                               value={entry.breakEnd || ''}
-                              onChange={(e) => updateScheduleDay(index, 'breakEnd', e.target.value)}
+                              onChange={(e) => {
+                                updateScheduleDay(index, 'breakEnd', e.target.value);
+                                e.target.blur();
+                              }}
                               className="block w-22 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-500 focus:border-black focus:ring-black"
                             />
                           </div>
@@ -462,14 +474,20 @@ export default function DashboardStaffPage() {
               label="Work start"
               type="time"
               value={form.workStart}
-              onChange={(e) => updateField('workStart', e.target.value)}
+              onChange={(e) => {
+                updateField('workStart', e.target.value);
+                e.target.blur();
+              }}
             />
             <Input
               id="staff-work-end"
               label="Work end"
               type="time"
               value={form.workEnd}
-              onChange={(e) => updateField('workEnd', e.target.value)}
+              onChange={(e) => {
+                updateField('workEnd', e.target.value);
+                e.target.blur();
+              }}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -478,14 +496,20 @@ export default function DashboardStaffPage() {
               label="Break start (optional)"
               type="time"
               value={form.breakStart}
-              onChange={(e) => updateField('breakStart', e.target.value)}
+              onChange={(e) => {
+                updateField('breakStart', e.target.value);
+                e.target.blur();
+              }}
             />
             <Input
               id="staff-break-end"
               label="Break end (optional)"
               type="time"
               value={form.breakEnd}
-              onChange={(e) => updateField('breakEnd', e.target.value)}
+              onChange={(e) => {
+                updateField('breakEnd', e.target.value);
+                e.target.blur();
+              }}
             />
           </div>
           <div className="flex gap-3 pt-2">
