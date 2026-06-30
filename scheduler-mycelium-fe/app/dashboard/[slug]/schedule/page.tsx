@@ -178,6 +178,14 @@ export default function SchedulePage() {
     return { height: `${height}rem` };
   };
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Block Time</h1>
@@ -349,10 +357,15 @@ export default function SchedulePage() {
           <div>
             <label className="block text-sm font-medium text-gray-700">Date</label>
             <input
-              type="text"
-              readOnly
-              value={selectedDate.toLocaleDateString()}
-              className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 sm:text-sm"
+              type="date"
+              value={localDateISO(selectedDate)}
+              onChange={e => {
+                if (e.target.value) {
+                  const [y, m, d] = e.target.value.split('-');
+                  setSelectedDate(new Date(Number(y), Number(m) - 1, Number(d)));
+                }
+              }}
+              className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
             />
           </div>
 
