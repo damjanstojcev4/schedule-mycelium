@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import type { Appointment, BusinessBookingPage } from '@/types/api';
-import { todayISO, formatTime } from '@/lib/format';
+import { todayISO, formatTime, localDateISO } from '@/lib/format';
 
 function CalendarTodayIcon() {
   return (
@@ -51,7 +51,7 @@ function startOfWeekISO(): string {
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
-  return d.toISOString().slice(0, 10);
+  return localDateISO(d);
 }
 
 export default function DashboardOverviewPage() {

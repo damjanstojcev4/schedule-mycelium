@@ -45,8 +45,20 @@ export function formatPrice(price: number): string {
 }
 
 /**
- * Returns today's date as YYYY-MM-DD string
+ * Converts a Date to a YYYY-MM-DD string using LOCAL calendar date.
+ * IMPORTANT: never use date.toISOString().slice(0,10) — that converts to
+ * UTC first, so in UTC+2 "July 1 midnight local" becomes "June 30" UTC.
+ */
+export function localDateISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Returns today's date as YYYY-MM-DD string (local timezone).
  */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateISO(new Date());
 }

@@ -143,6 +143,7 @@ export interface AvailableSlots {
   date: string;
   staffId: string;
   availableSlots: string[];
+  unavailableSlots?: string[];
 }
 
 export interface BusinessBookingPage {

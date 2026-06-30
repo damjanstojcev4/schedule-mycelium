@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { href: `/dashboard/${slug}`, label: 'Overview', icon: <GridIcon /> },
     { href: `/dashboard/${slug}/appointments`, label: 'Appointments', icon: <CalendarIcon /> },
     { href: `/dashboard/${slug}/appointments/new`, label: 'New Appointment', icon: <PlusIcon /> },
-    { href: `/dashboard/${slug}/schedule`, label: 'Schedule', icon: <ClockIcon /> },
+    { href: `/dashboard/${slug}/schedule`, label: 'Block Time', icon: <ClockIcon /> },
     { href: `/dashboard/${slug}/services`, label: 'Services', icon: <ScissorsIcon /> },
     { 
       href: `/dashboard/${slug}/staff`, 

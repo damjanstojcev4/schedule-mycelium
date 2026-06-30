@@ -19,4 +19,6 @@ public class AvailableSlotsResponseDTO {
     private UUID servicePublicId;
     private LocalDate date;
     private List<LocalTime> availableSlots;
+    /** Slots that are within working hours but unavailable (blocked by admin or already booked). */
+    private List<LocalTime> unavailableSlots;
 }

@@ -45,6 +45,7 @@ export function SlotPicker({ slug }: SlotPickerProps) {
     () => selectedSlot?.date ?? null
   );
   const [slots, setSlots] = useState<string[]>([]);
+  const [unavailableSlots, setUnavailableSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState('');
 
@@ -54,6 +55,7 @@ export function SlotPicker({ slug }: SlotPickerProps) {
       setLoadingSlots(true);
       setSlotsError('');
       setSlots([]);
+      setUnavailableSlots([]);
       try {
         const result = await api.getAvailableSlots(
           slug,
@@ -62,6 +64,7 @@ export function SlotPicker({ slug }: SlotPickerProps) {
           selectedStaff?.publicId,
         );
         setSlots(result.availableSlots.map((t) => t.slice(0, 5)));
+        setUnavailableSlots((result.unavailableSlots ?? []).map((t) => t.slice(0, 5)));
       } catch (e) {
         setSlotsError(e instanceof Error ? e.message : 'Failed to load slots.');
       } finally {
@@ -74,6 +77,7 @@ export function SlotPicker({ slug }: SlotPickerProps) {
     if (dateStr < today) return;
     setSelectedDate(dateStr);
     setSlots([]);
+    setUnavailableSlots([]);
   }
 
   function handleSlotSelect(time: string) {
@@ -99,15 +103,55 @@ export function SlotPicker({ slug }: SlotPickerProps) {
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
 
-  // Group slots by AM / PM
-  const amSlots = slots.filter((t) => parseHour(t) < 12);
-  const pmSlots = slots.filter((t) => parseHour(t) >= 12);
+  // Merge available + unavailable, sort, then split AM/PM
+  const allSlotsSorted = [...slots, ...unavailableSlots].sort();
+  const unavailableSet = new Set(unavailableSlots);
+
+  const amAll = allSlotsSorted.filter((t) => parseHour(t) < 12);
+  const pmAll = allSlotsSorted.filter((t) => parseHour(t) >= 12);
 
   const selectedDateFormatted = selectedDate
     ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'long',
       })
     : null;
+
+  function SlotChip({ time }: { time: string }) {
+    const isUnavailable = unavailableSet.has(time);
+    const isSelected = !isUnavailable && selectedSlot?.date === selectedDate && selectedSlot.time === time;
+
+    if (isUnavailable) {
+      return (
+        <div
+          title="Unavailable"
+          className="relative px-4 py-2.5 rounded-2xl border border-zinc-100 bg-zinc-50 text-sm font-semibold text-zinc-300 cursor-not-allowed select-none"
+        >
+          <span className="line-through">{time}</span>
+          {/* small lock icon */}
+          <svg className="inline-block ml-1 h-3 w-3 text-zinc-300" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+          </svg>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        key={time}
+        id={`slot-${time}`}
+        type="button"
+        onClick={() => handleSlotSelect(time)}
+        className={[
+          'px-4 py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150 active:scale-95',
+          isSelected
+            ? 'bg-zinc-900 border-zinc-900 text-white shadow-md'
+            : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-900 hover:text-zinc-900',
+        ].join(' ')}
+      >
+        {time}
+      </button>
+    );
+  }
 
   return (
     <div>
@@ -208,7 +252,7 @@ export function SlotPicker({ slug }: SlotPickerProps) {
             </div>
           )}
 
-          {!loadingSlots && !slotsError && slots.length === 0 && (
+          {!loadingSlots && !slotsError && allSlotsSorted.length === 0 && (
             <div className="rounded-2xl border border-dashed border-zinc-200 py-10 text-center">
               <svg className="h-8 w-8 text-zinc-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -218,60 +262,36 @@ export function SlotPicker({ slug }: SlotPickerProps) {
             </div>
           )}
 
-          {!loadingSlots && slots.length > 0 && (
+          {!loadingSlots && allSlotsSorted.length > 0 && (
             <div className="space-y-4">
+              {/* Legend */}
+              <div className="flex items-center gap-4 text-xs text-zinc-400 pb-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-full bg-zinc-900" />
+                  Available
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-full bg-zinc-200" />
+                  Unavailable
+                </span>
+              </div>
+
               {/* AM slots */}
-              {amSlots.length > 0 && (
+              {amAll.length > 0 && (
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Morning</p>
                   <div className="flex flex-wrap gap-2">
-                    {amSlots.map((time) => {
-                      const isSelected = selectedSlot?.date === selectedDate && selectedSlot.time === time;
-                      return (
-                        <button
-                          key={time}
-                          id={`slot-${time}`}
-                          type="button"
-                          onClick={() => handleSlotSelect(time)}
-                          className={[
-                            'px-4 py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150 active:scale-95',
-                            isSelected
-                              ? 'bg-zinc-900 border-zinc-900 text-white shadow-md'
-                              : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-900 hover:text-zinc-900',
-                          ].join(' ')}
-                        >
-                          {time}
-                        </button>
-                      );
-                    })}
+                    {amAll.map((time) => <SlotChip key={time} time={time} />)}
                   </div>
                 </div>
               )}
 
               {/* PM slots */}
-              {pmSlots.length > 0 && (
+              {pmAll.length > 0 && (
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Afternoon & Evening</p>
                   <div className="flex flex-wrap gap-2">
-                    {pmSlots.map((time) => {
-                      const isSelected = selectedSlot?.date === selectedDate && selectedSlot.time === time;
-                      return (
-                        <button
-                          key={time}
-                          id={`slot-${time}`}
-                          type="button"
-                          onClick={() => handleSlotSelect(time)}
-                          className={[
-                            'px-4 py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150 active:scale-95',
-                            isSelected
-                              ? 'bg-zinc-900 border-zinc-900 text-white shadow-md'
-                              : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-900 hover:text-zinc-900',
-                          ].join(' ')}
-                        >
-                          {time}
-                        </button>
-                      );
-                    })}
+                    {pmAll.map((time) => <SlotChip key={time} time={time} />)}
                   </div>
                 </div>
               )}

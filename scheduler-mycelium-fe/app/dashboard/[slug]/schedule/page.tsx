@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { TimeBlockResponse, Appointment, StaffMember } from '@/types/api';
 import { Modal } from '@/components/ui/Modal';
 import { useParams } from 'next/navigation';
+import { localDateISO } from '@/lib/format';
 
 export default function SchedulePage() {
   const { slug } = useParams() as { slug: string };
@@ -47,7 +48,7 @@ export default function SchedulePage() {
   const loadBlocks = async (date: Date, staffId: string) => {
     if (!staffId) return;
     try {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = localDateISO(date);
       const businesses = await api.getBusinesses();
       const biz = businesses.find(b => b.slug === slug);
       if (!biz) return;
@@ -97,7 +98,7 @@ export default function SchedulePage() {
            d1.getDate() === d2.getDate();
   };
 
-  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+  const selectedDateStr = localDateISO(selectedDate);
   const todaysAppointments = appointments.filter(a => 
     a.startTime.startsWith(selectedDateStr) &&
     (selectedStaffId ? a.staffName === staffList.find(s => s.publicId === selectedStaffId)?.name : true)
@@ -179,7 +180,7 @@ export default function SchedulePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Schedule & Time Blocks</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Block Time</h1>
 
       {!soloOperator && (
         <div className="mb-6 max-w-xs">
@@ -223,7 +224,7 @@ export default function SchedulePage() {
                 const isToday = isSameDay(date, new Date());
                 return (
                   <button
-                    key={date.toISOString()}
+                    key={localDateISO(date)}
                     onClick={() => setSelectedDate(date)}
                     className={`p-2 rounded-full w-8 h-8 flex items-center justify-center mx-auto text-sm transition-colors ${
                       isSelected ? 'bg-black text-white' : 
@@ -271,14 +272,25 @@ export default function SchedulePage() {
                 const endTime = app.endTime.split('T')[1];
                 const top = getPositionStyles(startTime);
                 const height = getHeightStyles(startTime, endTime);
+                
+                const [sh, sm] = startTime.split(':').map(Number);
+                const [eh, em] = endTime.split(':').map(Number);
+                const diff = (eh * 60 + em) - (sh * 60 + sm);
+                const isSmall = diff <= 30;
+                const isTiny = diff <= 15;
+
                 return (
                   <div
                     key={app.publicId}
-                    className="absolute left-16 right-4 ml-2 mr-2 bg-blue-100 border border-blue-200 rounded-md p-2 overflow-hidden"
-                    style={{ ...top, ...height }}
+                    className={`absolute left-16 right-4 ml-2 mr-2 bg-blue-100 border border-blue-200 rounded-md overflow-hidden flex ${
+                      isSmall ? 'flex-row items-center gap-2 px-2 py-0.5' : 'flex-col p-2'
+                    }`}
+                    style={{ ...top, ...height, minHeight: isTiny ? '1.75rem' : 'auto', zIndex: isTiny ? 10 : 1 }}
                   >
-                    <div className="text-xs font-semibold text-blue-900">{app.serviceName}</div>
-                    <div className="text-xs text-blue-700">{app.customerName || app.guestName || 'Walk-in'}</div>
+                    <div className="text-xs font-semibold text-blue-900 truncate">{app.serviceName}</div>
+                    <div className={`text-xs text-blue-700 truncate ${isSmall ? '' : 'mt-0.5'}`}>
+                      {isSmall ? '• ' : ''}{app.customerName || app.guestName || 'Walk-in'}
+                    </div>
                   </div>
                 );
               })}
@@ -287,21 +299,34 @@ export default function SchedulePage() {
               {blocks.map(block => {
                 const top = getPositionStyles(block.startTime);
                 const height = getHeightStyles(block.startTime, block.endTime);
+                
+                const [sh, sm] = block.startTime.split(':').map(Number);
+                const [eh, em] = block.endTime.split(':').map(Number);
+                const diff = (eh * 60 + em) - (sh * 60 + sm);
+                const isSmall = diff <= 30;
+                const isTiny = diff <= 15;
+
                 return (
                   <div
                     key={block.publicId}
-                    className="absolute left-16 right-4 ml-2 mr-2 bg-gray-100 border border-gray-300 rounded-md p-2 overflow-hidden flex flex-col group cursor-pointer"
+                    className={`absolute left-16 right-4 ml-2 mr-2 bg-gray-100 border border-gray-300 rounded-md overflow-hidden flex group cursor-pointer ${
+                      isSmall ? 'flex-row items-center px-2 py-0.5' : 'flex-col p-2'
+                    }`}
                     style={{ 
                       ...top, 
                       ...height,
+                      minHeight: isTiny ? '1.75rem' : 'auto',
+                      zIndex: isTiny ? 5 : 1,
                       backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.03) 10px, rgba(0,0,0,0.03) 20px)'
                     }}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="text-xs font-semibold text-gray-700">Blocked Time</div>
+                    <div className={`flex ${isSmall ? 'items-center gap-2' : 'justify-between items-start'} w-full`}>
+                      <div className="text-xs font-semibold text-gray-700 whitespace-nowrap">Blocked Time</div>
+                      {block.reason && !isSmall && <div className="text-xs text-gray-500 mt-1 truncate">{block.reason}</div>}
+                      {block.reason && isSmall && <div className="text-xs text-gray-500 truncate mr-auto">({block.reason})</div>}
                       <button 
                         onClick={() => handleDeleteBlock(block.publicId)}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className={`text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ${isSmall ? 'ml-auto' : ''}`}
                         title="Remove Block"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -309,7 +334,6 @@ export default function SchedulePage() {
                         </svg>
                       </button>
                     </div>
-                    {block.reason && <div className="text-xs text-gray-500 mt-1">{block.reason}</div>}
                   </div>
                 );
               })}
@@ -335,23 +359,35 @@ export default function SchedulePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">From</label>
-              <input
-                type="time"
+              <select
                 required
                 value={fromTime}
                 onChange={e => setFromTime(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
-              />
+              >
+                {Array.from({ length: 13 }, (_, h) => h + 8).flatMap(h =>
+                  [0, 15, 30, 45].map(m => {
+                    const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                    return <option key={val} value={val}>{val}</option>;
+                  })
+                )}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">To</label>
-              <input
-                type="time"
+              <select
                 required
                 value={toTime}
                 onChange={e => setToTime(e.target.value)}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
-              />
+              >
+                {Array.from({ length: 13 }, (_, h) => h + 8).flatMap(h =>
+                  [0, 15, 30, 45].map(m => {
+                    const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                    return <option key={val} value={val}>{val}</option>;
+                  })
+                )}
+              </select>
             </div>
           </div>
 
