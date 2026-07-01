@@ -69,7 +69,7 @@ export default function AdminAppointmentsPage() {
           <table className="w-full min-w-[800px] text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {['Date / Time', 'Service', 'Customer', 'Staff', 'Business', 'Status'].map((h) => (
+                {['Booked Date / Time', 'Created At', 'Service', 'Customer', 'Staff', 'Business', 'Status'].map((h) => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                     {h}
                   </th>
@@ -82,6 +82,16 @@ export default function AdminAppointmentsPage() {
                   <td className="px-5 py-3.5 align-middle whitespace-nowrap">
                     <p className="font-medium text-gray-900">{formatDate(appt.startTime)}</p>
                     <p className="text-xs text-gray-400">{formatTime(appt.startTime)}–{formatTime(appt.endTime)}</p>
+                  </td>
+                  <td className="px-5 py-3.5 align-middle whitespace-nowrap">
+                    {appt.createdAt ? (
+                      <>
+                        <p className="font-medium text-gray-900">{formatDate(appt.createdAt)}</p>
+                        <p className="text-xs text-gray-400">{formatTime(appt.createdAt)}</p>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-700">{appt.serviceName}</td>
                   <td className="px-5 py-3.5 align-middle whitespace-nowrap text-gray-700">{appt.customerName}</td>
