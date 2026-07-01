@@ -22,7 +22,7 @@ export default function AdminAppointmentsPage() {
     api
       .adminGetAppointments()
       .then((data) => {
-        const sorted = [...data].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        const sorted = [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setAppointments(sorted);
       })
       .catch((e: Error) => setError(e.message))
