@@ -248,15 +248,15 @@ export default function DashboardAppointmentsPage() {
         </>
       )}
 
-      {viewMode === 'calendar' && !loading && (
-        <div className="mb-6 flex items-center justify-between bg-white border border-zinc-200 p-4 rounded-xl shadow-sm">
+      {!loading && viewMode === 'calendar' && (
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-zinc-200 p-4 rounded-xl shadow-sm">
           <div>
             <h3 className="text-lg font-bold text-zinc-900">
               {new Date(calendarDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
             <p className="text-xs text-zinc-500">Select a day to view schedule</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
             <button
               onClick={() => {
                 const d = new Date(calendarDate);
