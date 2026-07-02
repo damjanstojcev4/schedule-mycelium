@@ -185,6 +185,7 @@ export function CalendarView({
                       if (end <= start) end = start + 0.5;
 
                       if (start >= 20 || end <= 8) return null;
+                      if (appt.status === 'CANCELLED') return null;
                       const displayStart = Math.max(start, 8);
                       const displayEnd = Math.min(end, 20);
                       const color = appt.serviceColor || '#3b82f6';

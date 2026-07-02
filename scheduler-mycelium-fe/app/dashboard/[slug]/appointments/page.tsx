@@ -79,7 +79,16 @@ export default function DashboardAppointmentsPage() {
           }
           return appt;
         });
-        const sorted = autoCompleted.sort(
+        const apptsWithColors = autoCompleted.map((appt) => {
+          if (appt.serviceColor && appt.serviceColor !== '#3b82f6') return appt; // Already has custom color
+          const matchingService = servicesData.find(s => s.name === appt.serviceName);
+          return {
+            ...appt,
+            serviceColor: matchingService?.color || '#3b82f6'
+          };
+        });
+
+        const sorted = apptsWithColors.sort(
           (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
         );
         setAppointments(sorted);
