@@ -21,9 +21,10 @@ const statusConfig: Record<AppointmentStatus, { label: string; dot: string; pill
 interface BadgeProps {
   status: AppointmentStatus;
   size?: 'sm' | 'md';
+  className?: string;
 }
 
-export function Badge({ status, size = 'sm' }: BadgeProps) {
+export function Badge({ status, size = 'sm', className }: BadgeProps) {
   const config = statusConfig[status] ?? {
     label: status,
     dot: 'bg-zinc-400',
@@ -36,7 +37,8 @@ export function Badge({ status, size = 'sm' }: BadgeProps) {
         'inline-flex items-center gap-1.5 rounded-full font-medium',
         size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm',
         config.pill,
-      ].join(' ')}
+        className,
+      ].filter(Boolean).join(' ')}
     >
       <span className={['rounded-full shrink-0', config.dot, size === 'sm' ? 'h-1.5 w-1.5' : 'h-2 w-2'].join(' ')} />
       {config.label}
