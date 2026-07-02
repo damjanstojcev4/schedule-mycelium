@@ -80,7 +80,7 @@ export default function DashboardOverviewPage() {
           }
           return appt;
         });
-        const sorted = autoCompleted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        const sorted = autoCompleted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setAppointments(sorted);
       })
       .catch((e: Error) => setError(e.message))
