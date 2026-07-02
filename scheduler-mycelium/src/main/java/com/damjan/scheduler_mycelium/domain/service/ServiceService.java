@@ -36,6 +36,7 @@ public class ServiceService {
         service.setDurationMinutes(request.getDurationMinutes());
         service.setPrice(request.getPrice());
         service.setIsActive(true);
+        service.setColor(request.getColor() != null && !request.getColor().isBlank() ? request.getColor() : "#3b82f6");
 
         service = serviceRepository.save(service);
 
@@ -83,6 +84,7 @@ public class ServiceService {
         if (request.getDescription() != null) service.setDescription(request.getDescription());
         if (request.getDurationMinutes() != null) service.setDurationMinutes(request.getDurationMinutes());
         if (request.getPrice() != null) service.setPrice(request.getPrice());
+        if (request.getColor() != null && !request.getColor().isBlank()) service.setColor(request.getColor());
 
         service = serviceRepository.save(service);
 
@@ -133,7 +135,8 @@ public class ServiceService {
                 service.getDurationMinutes(),
                 service.getPrice(),
                 service.getIsActive(),
-                service.getCreatedAt()
+                service.getCreatedAt(),
+                service.getColor() != null ? service.getColor() : "#3b82f6"
         );
     }
 }

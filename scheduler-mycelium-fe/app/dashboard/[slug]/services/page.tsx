@@ -19,9 +19,25 @@ interface ServiceFormState {
   description: string;
   durationMinutes: string;
   price: string;
+  color: string;
 }
 
-const emptyForm: ServiceFormState = { name: '', description: '', durationMinutes: '30', price: '0' };
+const PRESET_COLORS = [
+  { hex: '#3b82f6', label: 'Blue' },
+  { hex: '#8b5cf6', label: 'Violet' },
+  { hex: '#ec4899', label: 'Pink' },
+  { hex: '#f97316', label: 'Orange' },
+  { hex: '#eab308', label: 'Yellow' },
+  { hex: '#10b981', label: 'Emerald' },
+  { hex: '#06b6d4', label: 'Cyan' },
+  { hex: '#ef4444', label: 'Red' },
+  { hex: '#6366f1', label: 'Indigo' },
+  { hex: '#14b8a6', label: 'Teal' },
+  { hex: '#f43f5e', label: 'Rose' },
+  { hex: '#84cc16', label: 'Lime' },
+];
+
+const emptyForm: ServiceFormState = { name: '', description: '', durationMinutes: '30', price: '0', color: '#3b82f6' };
 
 export default function DashboardServicesPage() {
   const params = useParams<{ slug: string }>();
@@ -82,6 +98,7 @@ export default function DashboardServicesPage() {
       description: service.description ?? '',
       durationMinutes: String(service.durationMinutes),
       price: String(service.price),
+      color: service.color ?? '#3b82f6',
     });
     setFormError('');
     setModalOpen(true);
@@ -113,6 +130,7 @@ export default function DashboardServicesPage() {
         description: form.description.trim() || undefined,
         durationMinutes: dur,
         price,
+        color: form.color || '#3b82f6',
       };
       if (editingService) {
         const updated = await api.updateService(businessPublicId, editingService.publicId, body);
@@ -209,6 +227,10 @@ export default function DashboardServicesPage() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block w-3 h-3 rounded-full shrink-0 shadow-sm"
+                    style={{ backgroundColor: service.color ?? '#3b82f6' }}
+                  />
                   <span className="font-medium text-gray-900">{service.name}</span>
                   {!service.isActive && (
                     <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
@@ -306,6 +328,35 @@ export default function DashboardServicesPage() {
               placeholder="2500 = $25.00"
             />
           </div>
+
+          {/* Color picker */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Calendar Color</p>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COLORS.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  title={c.label}
+                  onClick={() => updateField('color', c.hex)}
+                  className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
+                  style={{
+                    backgroundColor: c.hex,
+                    borderColor: form.color === c.hex ? '#111827' : 'transparent',
+                    boxShadow: form.color === c.hex ? `0 0 0 2px white, 0 0 0 4px ${c.hex}` : 'none',
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <span
+                className="w-6 h-6 rounded-full border border-zinc-200"
+                style={{ backgroundColor: form.color }}
+              />
+              <span className="text-xs text-zinc-500 font-mono">{form.color}</span>
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <Button variant="secondary" onClick={closeModal} disabled={saving}>
               Cancel

@@ -20,4 +20,5 @@ public class ServiceResponseDTO {
     private BigDecimal price;
     private Boolean isActive;
     private LocalDateTime createdAt;
+    private String color;
 }

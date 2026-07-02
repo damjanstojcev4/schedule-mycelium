@@ -28,4 +28,5 @@ public class AppointmentResponseDTO {
     private LocalDateTime createdAt;
     private String businessName;
     private String businessSlug;
+    private String serviceColor;
 }

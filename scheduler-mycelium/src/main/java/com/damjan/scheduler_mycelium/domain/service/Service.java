@@ -43,6 +43,9 @@ public class Service {
     @Column(nullable = false)
     private Boolean isActive = true;
 
+    @Column(nullable = false, length = 7)
+    private String color = "#3b82f6";
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

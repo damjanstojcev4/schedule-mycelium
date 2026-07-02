@@ -19,4 +19,6 @@ public class UpdateServiceRequestDTO {
 
     @Positive
     private BigDecimal price;
+
+    private String color;
 }

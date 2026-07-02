@@ -396,7 +396,8 @@ public class AppointmentService {
                 appointment.getNotes(),
                 appointment.getCreatedAt(),
                 appointment.getBusiness().getName(),
-                appointment.getBusiness().getSlug()
+                appointment.getBusiness().getSlug(),
+                appointment.getService().getColor() != null ? appointment.getService().getColor() : "#3b82f6"
         );
     }
 }

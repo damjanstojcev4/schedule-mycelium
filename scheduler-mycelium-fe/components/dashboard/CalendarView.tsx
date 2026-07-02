@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Appointment, StaffMember, TimeBlockResponse } from '@/types/api';
 import { formatTime } from '@/lib/format';
 import { Badge } from '@/components/ui/Badge';
@@ -34,6 +34,8 @@ export function CalendarView({
   onSlotClick,
   loadingId,
 }: CalendarViewProps) {
+  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+
   // Filter appointments for the current date
   const dayAppointments = appointments.filter((appt) => appt.startTime.startsWith(currentDate));
 
@@ -180,48 +182,35 @@ export function CalendarView({
                     {staffAppts.map((appt) => {
                       const start = timeToHour(appt.startTime.slice(11, 16));
                       let end = timeToHour(appt.endTime.slice(11, 16));
-                      if (end <= start) end = start + 0.5; // fallback duration
+                      if (end <= start) end = start + 0.5;
 
-                      // Don't render if outside our 8-20 range (or clip it)
                       if (start >= 20 || end <= 8) return null;
                       const displayStart = Math.max(start, 8);
                       const displayEnd = Math.min(end, 20);
+                      const color = appt.serviceColor || '#3b82f6';
+                      const customerLabel = appt.customerName ?? appt.guestName ?? 'Walk-in';
 
                       return (
                         <div
                           key={appt.publicId}
-                          className="absolute left-1 right-1 rounded-lg border border-blue-200 bg-blue-50 p-2 overflow-hidden hover:ring-2 hover:ring-blue-400 hover:z-10 transition-all shadow-sm flex flex-col"
-                          style={getSlotStyle(displayStart, displayEnd)}
+                          className="absolute left-1 right-1 rounded-lg overflow-hidden hover:ring-2 hover:z-10 transition-all shadow-sm cursor-pointer hover:shadow-md active:scale-[0.98]"
+                          style={{
+                            ...getSlotStyle(displayStart, displayEnd),
+                            backgroundColor: `${color}18`,
+                            borderLeft: `3px solid ${color}`,
+                            borderTop: `1px solid ${color}40`,
+                            borderRight: `1px solid ${color}40`,
+                            borderBottom: `1px solid ${color}40`,
+                            // @ts-expect-error CSS custom property for ring
+                            '--tw-ring-color': color,
+                          }}
+                          onClick={() => setSelectedAppt(appt)}
                         >
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="text-xs font-bold text-blue-900 truncate pr-2">
-                              {formatTime(appt.startTime)} - {formatTime(appt.endTime)}
+                          <div className="px-2 py-1 flex items-center justify-between gap-1 overflow-hidden h-full">
+                            <span className="text-[10px] font-bold truncate" style={{ color }}>
+                              {formatTime(appt.startTime)} – {formatTime(appt.endTime)}
                             </span>
                             <Badge status={appt.status} className="scale-75 origin-top-right shrink-0" />
-                          </div>
-                          <p className="text-sm font-semibold text-zinc-900 truncate">{appt.serviceName}</p>
-                          <p className="text-xs text-zinc-600 truncate mt-0.5">{appt.customerName ?? appt.guestName ?? 'Guest'}</p>
-                          
-                          {/* Hover actions if enough space */}
-                          <div className="mt-auto pt-2 flex gap-1 opacity-0 hover:opacity-100 transition-opacity">
-                            {appt.status === 'BOOKED' && (
-                              <>
-                                <button
-                                  onClick={() => onComplete(appt.publicId)}
-                                  disabled={!!loadingId}
-                                  className="flex-1 bg-white border border-zinc-200 text-xs font-semibold py-1 rounded hover:bg-emerald-50 hover:text-emerald-700 transition-colors disabled:opacity-50"
-                                >
-                                  Done
-                                </button>
-                                <button
-                                  onClick={() => onCancel(appt.publicId)}
-                                  disabled={!!loadingId}
-                                  className="flex-1 bg-white border border-zinc-200 text-xs font-semibold py-1 rounded hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            )}
                           </div>
                         </div>
                       );
@@ -239,6 +228,108 @@ export function CalendarView({
           </div>
         </div>
       </div>
+
+      {/* Appointment Detail Modal */}
+      {selectedAppt && (() => {
+        const color = selectedAppt.serviceColor || '#3b82f6';
+        const customerLabel = selectedAppt.customerName ?? selectedAppt.guestName ?? 'Walk-in';
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            aria-modal="true"
+            role="dialog"
+          >
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+              onClick={() => setSelectedAppt(null)}
+            />
+
+            {/* Panel */}
+            <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Colored header bar */}
+              <div className="h-2 w-full" style={{ backgroundColor: color }} />
+
+              <div className="p-5">
+                {/* Status + service */}
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-zinc-900">{selectedAppt.serviceName}</h3>
+                    <p className="text-sm text-zinc-500 mt-0.5">{selectedAppt.staffName}</p>
+                  </div>
+                  <Badge status={selectedAppt.status} size="md" />
+                </div>
+
+                {/* Details grid */}
+                <div className="space-y-3 mb-5">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-zinc-400 text-xs font-semibold w-14 shrink-0">Date</span>
+                    <span className="text-zinc-700 font-medium">
+                      {new Date(selectedAppt.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-zinc-400 text-xs font-semibold w-14 shrink-0">Time</span>
+                    <span className="text-zinc-700 font-medium">
+                      {formatTime(selectedAppt.startTime)} – {formatTime(selectedAppt.endTime)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-zinc-400 text-xs font-semibold w-14 shrink-0">Client</span>
+                    <span className="text-zinc-700 font-medium">{customerLabel}</span>
+                  </div>
+                  {selectedAppt.guestEmail && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-zinc-400 text-xs font-semibold w-14 shrink-0">Email</span>
+                      <span className="text-zinc-700">{selectedAppt.guestEmail}</span>
+                    </div>
+                  )}
+                  {selectedAppt.guestPhone && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-zinc-400 text-xs font-semibold w-14 shrink-0">Phone</span>
+                      <span className="text-zinc-700">{selectedAppt.guestPhone}</span>
+                    </div>
+                  )}
+                  {selectedAppt.notes && (
+                    <div className="flex items-start gap-3 text-sm">
+                      <span className="text-zinc-400 text-xs font-semibold w-14 shrink-0 mt-0.5">Notes</span>
+                      <span className="text-zinc-600 italic">{selectedAppt.notes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  {selectedAppt.status === 'BOOKED' && (
+                    <>
+                      <button
+                        onClick={() => { onComplete(selectedAppt.publicId); setSelectedAppt(null); }}
+                        disabled={!!loadingId}
+                        className="flex-1 py-2.5 bg-emerald-500 text-white text-sm font-bold rounded-xl shadow-sm hover:bg-emerald-600 active:bg-emerald-700 transition-colors disabled:opacity-50"
+                      >
+                        Mark Complete
+                      </button>
+                      <button
+                        onClick={() => { onCancel(selectedAppt.publicId); setSelectedAppt(null); }}
+                        disabled={!!loadingId}
+                        className="flex-1 py-2.5 bg-red-50 text-red-600 border border-red-200 text-sm font-bold rounded-xl shadow-sm hover:bg-red-100 active:bg-red-200 transition-colors disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setSelectedAppt(null)}
+                    className={`${selectedAppt.status !== 'BOOKED' ? 'flex-1' : ''} py-2.5 px-4 bg-zinc-100 text-zinc-600 text-sm font-medium rounded-xl hover:bg-zinc-200 transition-colors`}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

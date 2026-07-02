@@ -25,4 +25,6 @@ public class CreateServiceRequestDTO {
     @NotNull
     @Positive
     private BigDecimal price;
+
+    private String color; // Optional hex color, e.g. "#3b82f6"
 }

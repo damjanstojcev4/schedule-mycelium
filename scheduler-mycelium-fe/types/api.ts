@@ -82,6 +82,7 @@ export interface Service {
   durationMinutes: number;
   price: number;
   isActive: boolean;
+  color: string;
 }
 
 export interface CreateServiceRequest {
@@ -89,6 +90,7 @@ export interface CreateServiceRequest {
   description?: string;
   durationMinutes: number;
   price: number;
+  color?: string;
 }
 
 export interface UpdateServiceRequest {
@@ -96,6 +98,7 @@ export interface UpdateServiceRequest {
   description?: string;
   durationMinutes?: number;
   price?: number;
+  color?: string;
 }
 
 export interface StaffMember {
@@ -137,6 +140,7 @@ export interface Appointment {
   cancelledBy: 'CUSTOMER' | 'STAFF' | 'BUSINESS_OWNER' | null;
   notes: string | null;
   createdAt: string;
+  serviceColor: string;
 }
 
 export interface AvailableSlots {
