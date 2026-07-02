@@ -53,19 +53,19 @@ export function CalendarView({
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
       <div className="overflow-auto min-h-[600px] max-h-[800px] relative w-full scrollbar-none">
-        <div className="min-w-[600px] flex">
+        <div className="min-w-full flex">
           {/* Time axis */}
-          <div className="w-20 shrink-0 border-r border-zinc-200 bg-zinc-50 relative flex flex-col">
+          <div className="w-14 shrink-0 border-r border-zinc-200 bg-zinc-50 relative flex flex-col">
             <div className="h-14 border-b border-zinc-200 sticky top-0 z-30 bg-zinc-50" />
             {HOURS.map((hour) => (
               <React.Fragment key={hour}>
                 <div className="h-12 border-b border-zinc-200 relative">
-                  <span className="absolute -top-3 right-3 text-xs font-semibold text-zinc-500">
+                  <span className="absolute top-0 -translate-y-1/2 right-1 text-[10px] font-semibold text-zinc-500 bg-zinc-50 px-1">
                     {hour.toString().padStart(2, '0')}:00
                   </span>
                 </div>
                 <div className="h-12 border-b border-zinc-200 relative">
-                  <span className="absolute -top-3 right-3 text-xs font-semibold text-zinc-400">
+                  <span className="absolute top-0 -translate-y-1/2 right-1 text-[10px] font-semibold text-zinc-400 bg-zinc-50 px-1">
                     {hour.toString().padStart(2, '0')}:30
                   </span>
                 </div>
