@@ -80,7 +80,7 @@ export default function DashboardSettingsPage() {
     setBizError('');
     setBizSaved(false);
     try {
-      await api.updateBusiness(businessPublicId, {
+      await api.updateBusiness(slug, {
         name: name.trim(),
         description: description.trim() || undefined,
         phone: phone.trim(),

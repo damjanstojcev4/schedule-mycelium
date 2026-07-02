@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
+import { CalendarView } from '@/components/dashboard/CalendarView';
+import { SlotActionModal } from '@/components/dashboard/SlotActionModal';
 import { Spinner } from '@/components/ui/Spinner';
-import type { Appointment } from '@/types/api';
+import type { Appointment, StaffMember, Service, TimeBlockResponse } from '@/types/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { localDateISO } from '@/lib/format';
 
 type StatusFilter = 'ALL' | 'BOOKED' | 'COMPLETED' | 'CANCELLED';
 type DateFilter = 'TODAY' | 'WEEK' | 'ALL';
@@ -45,27 +49,31 @@ const STATUS_CONFIG: Record<StatusFilter, { label: string; dot?: string }> = {
 };
 
 export default function DashboardAppointmentsPage() {
+  const { auth } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [dateFilter, setDateFilter] = useState<DateFilter>('ALL');
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [calendarDate, setCalendarDate] = useState(localDateISO(new Date()));
+  const [selectedSlot, setSelectedSlot] = useState<{ staff: StaffMember; timeString: string } | null>(null);
+  const [timeBlocks, setTimeBlocks] = useState<Record<string, TimeBlockResponse[]>>({});
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  const fetchData = useCallback(() => {
+    if (!auth?.businessPublicId) return;
+    const fetchAppointments = api.getDashboardAppointments();
+    const fetchStaff = api.getStaff(auth.businessPublicId);
+    const fetchServices = api.getServices(auth.businessPublicId);
 
-  useEffect(() => {
-    api
-      .getDashboardAppointments()
-      .then((data) => {
+    Promise.all([fetchAppointments, fetchStaff, fetchServices])
+      .then(([apptsData, staffData, servicesData]) => {
         const now = new Date().getTime();
-        const autoCompleted = data.map((appt) => {
+        const autoCompleted = apptsData.map((appt) => {
           if (appt.status === 'BOOKED' && new Date(appt.endTime).getTime() <= now) {
             return { ...appt, status: 'COMPLETED' as const };
           }
@@ -75,9 +83,39 @@ export default function DashboardAppointmentsPage() {
           (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
         );
         setAppointments(sorted);
+        setStaffList(staffData);
+        setServices(servicesData);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
+  }, [auth]);
+
+  const fetchTimeBlocks = useCallback(() => {
+    if (!auth?.businessPublicId || staffList.length === 0) return;
+    const fetchAllBlocks = staffList.map(staff => 
+      api.getTimeBlocks(auth.businessPublicId!, staff.publicId, calendarDate)
+        .then(blocks => ({ staffId: staff.publicId, blocks }))
+    );
+    Promise.all(fetchAllBlocks).then(results => {
+      const newBlocks: Record<string, TimeBlockResponse[]> = {};
+      results.forEach(r => newBlocks[r.staffId] = r.blocks);
+      setTimeBlocks(newBlocks);
+    });
+  }, [auth, staffList, calendarDate]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    fetchTimeBlocks();
+  }, [fetchTimeBlocks]);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
   async function handleCancel(publicId: string) {
@@ -90,7 +128,6 @@ export default function DashboardAppointmentsPage() {
       setAppointments((prev) =>
         prev.map((a) => (a.publicId === publicId ? { ...a, status: 'CANCELLED' } : a)),
       );
-      window.location.reload();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Failed to cancel.');
     } finally {
@@ -105,7 +142,6 @@ export default function DashboardAppointmentsPage() {
       setAppointments((prev) =>
         prev.map((a) => (a.publicId === publicId ? { ...a, status: 'COMPLETED' } : a)),
       );
-      window.location.reload();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Failed to complete.');
     } finally {
@@ -135,61 +171,131 @@ export default function DashboardAppointmentsPage() {
 
   return (
     <div>
-      <PageHeader title="Appointments" description="Manage all bookings for your business." />
-
-      {/* Stats row */}
-      {!loading && (
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {([
-            { label: 'Today', value: appointments.filter(isTodayAppt).length, onClick: () => setDateFilter('TODAY'), active: dateFilter === 'TODAY' },
-            { label: 'This week', value: appointments.filter(isThisWeekAppt).length, onClick: () => setDateFilter('WEEK'), active: dateFilter === 'WEEK' },
-            { label: 'All time', value: appointments.length, onClick: () => setDateFilter('ALL'), active: dateFilter === 'ALL' },
-          ]).map((stat) => (
-            <button
-              key={stat.label}
-              type="button"
-              onClick={stat.onClick}
-              className={[
-                'rounded-2xl border p-4 text-left transition-all duration-150 active:scale-[0.98]',
-                stat.active ? 'bg-zinc-950 border-zinc-950 text-white' : 'bg-white border-zinc-200 hover:border-zinc-400',
-              ].join(' ')}
+      <PageHeader 
+        title="Appointments" 
+        description="Manage all bookings for your business."
+        action={
+          <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
             >
-              <p className={['text-2xl font-black', stat.active ? 'text-white' : 'text-zinc-900'].join(' ')}>{stat.value}</p>
-              <p className={['text-xs font-semibold mt-0.5', stat.active ? 'text-zinc-400' : 'text-zinc-500'].join(' ')}>{stat.label}</p>
+              List View
             </button>
-          ))}
-        </div>
+            <button 
+              onClick={() => setViewMode('calendar')}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
+            >
+              Calendar View
+            </button>
+          </div>
+        }
+      />
+
+      {viewMode === 'list' && !loading && (
+        <>
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {([
+              { label: 'Today', value: appointments.filter(isTodayAppt).length, onClick: () => setDateFilter('TODAY'), active: dateFilter === 'TODAY' },
+              { label: 'This week', value: appointments.filter(isThisWeekAppt).length, onClick: () => setDateFilter('WEEK'), active: dateFilter === 'WEEK' },
+              { label: 'All time', value: appointments.length, onClick: () => setDateFilter('ALL'), active: dateFilter === 'ALL' },
+            ]).map((stat) => (
+              <button
+                key={stat.label}
+                type="button"
+                onClick={stat.onClick}
+                className={[
+                  'rounded-2xl border p-4 text-left transition-all duration-150 active:scale-[0.98]',
+                  stat.active ? 'bg-zinc-950 border-zinc-950 text-white' : 'bg-white border-zinc-200 hover:border-zinc-400',
+                ].join(' ')}
+              >
+                <p className={['text-2xl font-black', stat.active ? 'text-white' : 'text-zinc-900'].join(' ')}>{stat.value}</p>
+                <p className={['text-xs font-semibold mt-0.5', stat.active ? 'text-zinc-400' : 'text-zinc-500'].join(' ')}>{stat.label}</p>
+              </button>
+            ))}
+          </div>
+
+          {/* Status filter pills */}
+          <div className="flex gap-2 overflow-x-auto pb-1 mb-5 scrollbar-none">
+            {STATUS_FILTERS.map((f) => {
+              const cfg = STATUS_CONFIG[f];
+              const isActive = statusFilter === f;
+              return (
+                <button
+                  key={f}
+                  id={`filter-${f.toLowerCase()}`}
+                  type="button"
+                  onClick={() => setStatusFilter(f)}
+                  className={[
+                    'shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-all duration-150 border active:scale-95',
+                    isActive
+                      ? 'bg-zinc-900 border-zinc-900 text-white'
+                      : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-900 hover:text-zinc-900',
+                  ].join(' ')}
+                >
+                  {cfg.dot && <span className={['h-2 w-2 rounded-full shrink-0', isActive ? 'bg-white' : cfg.dot].join(' ')} />}
+                  {cfg.label}
+                  {counts[f] > 0 && (
+                    <span className={['text-xs rounded-full px-1.5', isActive ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500'].join(' ')}>
+                      {counts[f]}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
 
-      {/* Status filter pills */}
-      <div className="flex gap-2 overflow-x-auto pb-1 mb-5 scrollbar-none">
-        {STATUS_FILTERS.map((f) => {
-          const cfg = STATUS_CONFIG[f];
-          const isActive = statusFilter === f;
-          return (
+      {viewMode === 'calendar' && !loading && (
+        <div className="mb-6 flex items-center justify-between bg-white border border-zinc-200 p-4 rounded-xl shadow-sm">
+          <div>
+            <h3 className="text-lg font-bold text-zinc-900">
+              {new Date(calendarDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h3>
+            <p className="text-xs text-zinc-500">Select a day to view schedule</p>
+          </div>
+          <div className="flex items-center gap-3">
             <button
-              key={f}
-              id={`filter-${f.toLowerCase()}`}
-              type="button"
-              onClick={() => setStatusFilter(f)}
-              className={[
-                'shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-all duration-150 border active:scale-95',
-                isActive
-                  ? 'bg-zinc-900 border-zinc-900 text-white'
-                  : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-900 hover:text-zinc-900',
-              ].join(' ')}
+              onClick={() => {
+                const d = new Date(calendarDate);
+                d.setDate(d.getDate() - 1);
+                setCalendarDate(localDateISO(d));
+              }}
+              className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
             >
-              {cfg.dot && <span className={['h-2 w-2 rounded-full shrink-0', isActive ? 'bg-white' : cfg.dot].join(' ')} />}
-              {cfg.label}
-              {counts[f] > 0 && (
-                <span className={['text-xs rounded-full px-1.5', isActive ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500'].join(' ')}>
-                  {counts[f]}
-                </span>
-              )}
+              <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
-          );
-        })}
-      </div>
+            <input
+              type="date"
+              value={calendarDate}
+              onChange={(e) => setCalendarDate(e.target.value)}
+              className="px-3 py-2 border border-zinc-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-zinc-900 focus:outline-none"
+            />
+            <button
+              onClick={() => {
+                const d = new Date(calendarDate);
+                d.setDate(d.getDate() + 1);
+                setCalendarDate(localDateISO(d));
+              }}
+              className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+            >
+              <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setCalendarDate(localDateISO(new Date()))}
+              className="px-3 py-2 bg-zinc-900 text-white text-sm font-semibold rounded-lg hover:bg-zinc-800 transition-colors"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="flex justify-center py-20">
@@ -203,7 +309,7 @@ export default function DashboardAppointmentsPage() {
         </div>
       )}
 
-      {!loading && (
+      {!loading && viewMode === 'list' && (
         <>
           {/* Mobile: card list */}
           <div className="md:hidden space-y-3 stagger-children">
@@ -235,6 +341,40 @@ export default function DashboardAppointmentsPage() {
             />
           </div>
         </>
+      )}
+      
+      {!loading && viewMode === 'calendar' && (
+        <CalendarView
+          appointments={appointments}
+          staffList={staffList}
+          timeBlocks={timeBlocks}
+          currentDate={calendarDate}
+          onCancel={handleCancel}
+          onComplete={handleComplete}
+          onSlotClick={(staffPublicId, timeString) => {
+            const staff = staffList.find(s => s.publicId === staffPublicId);
+            if (staff) setSelectedSlot({ staff, timeString });
+          }}
+          loadingId={loadingId}
+        />
+      )}
+
+      {selectedSlot && auth?.businessPublicId && auth?.slug && (
+        <SlotActionModal
+          isOpen={true}
+          onClose={() => setSelectedSlot(null)}
+          staff={selectedSlot.staff}
+          timeString={selectedSlot.timeString}
+          dateString={calendarDate}
+          services={services}
+          businessSlug={auth.slug}
+          businessPublicId={auth.businessPublicId}
+          onSuccess={() => {
+            setSelectedSlot(null);
+            fetchData();
+            fetchTimeBlocks();
+          }}
+        />
       )}
     </div>
   );
