@@ -55,7 +55,7 @@ export default function AdminBusinessesPage() {
     setLoading(true);
     api
       .adminGetBusinesses()
-      .then(setBusinesses)
+      .then((data) => setBusinesses([...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }

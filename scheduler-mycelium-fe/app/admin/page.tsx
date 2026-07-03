@@ -108,7 +108,7 @@ export default function SuperAdminDashboard() {
       booked: bookedBiz,
       activeRate,
     };
-  }).sort((a, b) => b.totalBookings - a.totalBookings);
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div>

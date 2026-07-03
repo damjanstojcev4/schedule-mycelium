@@ -90,7 +90,7 @@ export default function DashboardAppointmentsPage() {
         });
 
         const sorted = apptsWithColors.sort(
-          (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setAppointments(sorted);
         setStaffList(staffData);

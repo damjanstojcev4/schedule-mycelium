@@ -28,7 +28,7 @@ export default function AdminAccountsPage() {
   useEffect(() => {
     api
       .adminGetAccounts()
-      .then(setAccounts)
+      .then((data) => setAccounts([...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
