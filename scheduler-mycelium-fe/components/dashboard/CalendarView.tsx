@@ -14,27 +14,23 @@ interface CalendarViewProps {
   loadingId: string | null;
 }
 
-const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 to 20:00
+import { StaffScheduleResponseDTO } from '@/types/api';
 
-const TIME_SLOTS = HOURS.flatMap(h => {
-  if (h === 20) return [];
-  return [
-    { time: `${String(h).padStart(2, '0')}:00`, top: (h - 8) * 96 },
-    { time: `${String(h).padStart(2, '0')}:30`, top: (h - 8) * 96 + 48 }
-  ];
-});
+const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 to 20:00
 
 export function CalendarView({
   appointments,
   staffList,
   timeBlocks = {},
+  schedules = {},
   currentDate,
   onCancel,
   onComplete,
   onSlotClick,
   loadingId,
-}: CalendarViewProps) {
+}: CalendarViewProps & { schedules?: Record<string, StaffScheduleResponseDTO> }) {
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  const [hoverSlot, setHoverSlot] = useState<{ staffId: string, top: number, timeString: string } | null>(null);
 
   // Filter appointments for the current date
   const dayAppointments = appointments.filter((appt) => appt.startTime.startsWith(currentDate));
@@ -53,8 +49,8 @@ export function CalendarView({
   };
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-      <div className="overflow-auto min-h-[600px] max-h-[800px] relative w-full scrollbar-none">
+    <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
+      <div className="flex-1 overflow-y-auto relative w-full scrollbar-none">
         <div className="min-w-full flex">
           {/* Time axis */}
           <div className="w-14 shrink-0 border-r border-zinc-200 bg-zinc-50 relative flex flex-col">
@@ -93,10 +89,31 @@ export function CalendarView({
                 (a) => a.staffName === staff.name || (!a.staffName && staffList.length === 1)
               );
 
-              const breakStartHr = staff.breakStart ? timeToHour(staff.breakStart) : null;
-              const breakEndHr = staff.breakEnd ? timeToHour(staff.breakEnd) : null;
-              const workStartHr = staff.workStart ? timeToHour(staff.workStart) : 8;
-              const workEndHr = staff.workEnd ? timeToHour(staff.workEnd) : 20;
+              const dayObj = new Date(currentDate + 'T00:00:00');
+              const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+              const dayOfWeek = days[dayObj.getDay()];
+
+              let workStartHr = 8;
+              let workEndHr = 20;
+              let breakStartHr: number | null = null;
+              let breakEndHr: number | null = null;
+              let isWorking = false;
+
+              const staffSchedule = schedules?.[staff.publicId]?.schedule?.find(s => s.dayOfWeek === dayOfWeek);
+              if (staffSchedule && staffSchedule.isWorking) {
+                isWorking = true;
+                workStartHr = staffSchedule.workStart ? timeToHour(staffSchedule.workStart) : 8;
+                workEndHr = staffSchedule.workEnd ? timeToHour(staffSchedule.workEnd) : 20;
+                breakStartHr = staffSchedule.breakStart ? timeToHour(staffSchedule.breakStart) : null;
+                breakEndHr = staffSchedule.breakEnd ? timeToHour(staffSchedule.breakEnd) : null;
+              } else if (staffSchedule && !staffSchedule.isWorking) {
+                workStartHr = 20; // Will grey out the whole day
+                workEndHr = 8;
+              } else if (!staffSchedule) {
+                 // Fallback if no schedule data, assume standard hours so it's not entirely greyed out by default
+                 workStartHr = 9;
+                 workEndHr = 17;
+              }
 
               return (
                 <div key={staff.publicId} className="flex-1 border-r border-zinc-200 relative min-w-[200px]">
@@ -108,19 +125,42 @@ export function CalendarView({
                   <div className="relative h-[1248px]"> {/* 13 hours * 96px */}
                     
                     {/* Clickable empty slots */}
-                    <div className="absolute inset-0">
-                      {TIME_SLOTS.map((slot) => (
-                        <div
-                          key={slot.time}
-                          onClick={() => onSlotClick?.(staff.publicId, slot.time)}
-                          className="absolute left-1 right-1 h-[48px] rounded-lg cursor-pointer border border-transparent hover:bg-zinc-100/50 hover:border-zinc-300 transition-colors group z-0"
-                          style={{ top: `${slot.top}px` }}
+                    <div 
+                      className="absolute inset-0 z-0 cursor-pointer"
+                      onMouseMove={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const y = e.clientY - rect.top;
+                        const snappedY = Math.floor(y / 8) * 8; // Snap to 5 mins (8px)
+                        const hoursFrom8 = snappedY / 96;
+                        const totalHours = 8 + hoursFrom8;
+                        const hr = Math.floor(totalHours);
+                        const min = Math.round((totalHours - hr) * 60);
+                        let finalHr = hr;
+                        let finalMin = min;
+                        if (finalMin >= 60) {
+                          finalHr++;
+                          finalMin = 0;
+                        }
+                        const timeString = `${String(finalHr).padStart(2, '0')}:${String(finalMin).padStart(2, '0')}`;
+                        setHoverSlot({ staffId: staff.publicId, top: snappedY, timeString });
+                      }}
+                      onMouseLeave={() => setHoverSlot(null)}
+                      onClick={() => {
+                        if (hoverSlot?.staffId === staff.publicId) {
+                          onSlotClick?.(staff.publicId, hoverSlot.timeString);
+                        }
+                      }}
+                    >
+                      {hoverSlot?.staffId === staff.publicId && (
+                        <div 
+                          className="absolute left-1 right-1 h-[48px] rounded-lg border border-zinc-300 bg-zinc-100/50 pointer-events-none flex items-center justify-center z-10"
+                          style={{ top: `${hoverSlot.top}px` }}
                         >
-                          <span className="opacity-0 group-hover:opacity-100 absolute inset-0 flex items-center justify-center text-xs font-bold text-zinc-400">
-                            + Add
-                          </span>
+                           <span className="text-xs font-bold text-zinc-500 bg-white/80 px-2 py-1 rounded shadow-sm">
+                             + Add at {hoverSlot.timeString}
+                           </span>
                         </div>
-                      ))}
+                      )}
                     </div>
 
                     {/* Out of office hours */}
@@ -205,7 +245,10 @@ export function CalendarView({
                             // @ts-expect-error CSS custom property for ring
                             '--tw-ring-color': color,
                           }}
-                          onClick={() => setSelectedAppt(appt)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAppt(appt);
+                          }}
                         >
                           <div className="px-2 py-1 flex items-center justify-between gap-1 overflow-hidden h-full">
                             <span className="text-[10px] font-bold truncate" style={{ color }}>

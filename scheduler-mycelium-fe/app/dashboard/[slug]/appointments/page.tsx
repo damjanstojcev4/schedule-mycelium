@@ -8,7 +8,7 @@ import { AppointmentTable } from '@/components/dashboard/AppointmentTable';
 import { CalendarView } from '@/components/dashboard/CalendarView';
 import { SlotActionModal } from '@/components/dashboard/SlotActionModal';
 import { Spinner } from '@/components/ui/Spinner';
-import type { Appointment, StaffMember, Service, TimeBlockResponse } from '@/types/api';
+import type { Appointment, StaffMember, Service, TimeBlockResponse, StaffScheduleResponseDTO } from '@/types/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { localDateISO } from '@/lib/format';
 
@@ -63,6 +63,7 @@ export default function DashboardAppointmentsPage() {
   const [calendarDate, setCalendarDate] = useState(localDateISO(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<{ staff: StaffMember; timeString: string } | null>(null);
   const [timeBlocks, setTimeBlocks] = useState<Record<string, TimeBlockResponse[]>>({});
+  const [schedules, setSchedules] = useState<Record<string, StaffScheduleResponseDTO>>({});
 
   const fetchData = useCallback(() => {
     if (!auth?.businessPublicId) return;
@@ -112,6 +113,19 @@ export default function DashboardAppointmentsPage() {
     });
   }, [auth, staffList, calendarDate]);
 
+  const fetchSchedules = useCallback(() => {
+    if (!auth?.businessPublicId || staffList.length === 0) return;
+    const fetchAll = staffList.map(staff => 
+      api.getStaffSchedule(auth.businessPublicId!, staff.publicId)
+        .then(schedule => ({ staffId: staff.publicId, schedule }))
+    );
+    Promise.all(fetchAll).then(results => {
+      const newSchedules: Record<string, StaffScheduleResponseDTO> = {};
+      results.forEach(r => newSchedules[r.staffId] = r.schedule);
+      setSchedules(newSchedules);
+    });
+  }, [auth, staffList]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -119,6 +133,10 @@ export default function DashboardAppointmentsPage() {
   useEffect(() => {
     fetchTimeBlocks();
   }, [fetchTimeBlocks]);
+
+  useEffect(() => {
+    fetchSchedules();
+  }, [fetchSchedules]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -357,6 +375,7 @@ export default function DashboardAppointmentsPage() {
           appointments={appointments}
           staffList={staffList}
           timeBlocks={timeBlocks}
+          schedules={schedules}
           currentDate={calendarDate}
           onCancel={handleCancel}
           onComplete={handleComplete}
