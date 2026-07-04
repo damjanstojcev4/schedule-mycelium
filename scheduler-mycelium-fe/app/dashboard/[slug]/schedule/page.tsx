@@ -25,6 +25,11 @@ export default function SchedulePage() {
   const [fromTime, setFromTime] = useState('09:00');
   const [toTime, setToTime] = useState('10:00');
   const [reason, setReason] = useState('');
+  
+  const [blockMode, setBlockMode] = useState<'TIME' | 'OFF_DAYS'>('TIME');
+  const [offStartDate, setOffStartDate] = useState(localDateISO(new Date()));
+  const [offEndDate, setOffEndDate] = useState(localDateISO(new Date()));
+
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`solo-${slug}`);
@@ -99,6 +104,15 @@ export default function SchedulePage() {
   };
 
   const selectedDateStr = localDateISO(selectedDate);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setOffStartDate(selectedDateStr);
+      setOffEndDate(selectedDateStr);
+      setBlockMode('TIME');
+    }
+  }, [isModalOpen, selectedDateStr]);
+
   const todaysAppointments = appointments.filter(a => 
     a.startTime.startsWith(selectedDateStr) &&
     (selectedStaffId ? a.staffName === staffList.find(s => s.publicId === selectedStaffId)?.name : true)
@@ -108,16 +122,22 @@ export default function SchedulePage() {
     e.preventDefault();
     setError('');
     
-    if (fromTime >= toTime) {
-      setError('Start time must be before end time');
-      return;
-    }
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-      setError('Cannot block time in the past');
-      return;
+    if (blockMode === 'TIME') {
+      if (fromTime >= toTime) {
+        setError('Start time must be before end time');
+        return;
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate < today) {
+        setError('Cannot block time in the past');
+        return;
+      }
+    } else {
+      if (offStartDate > offEndDate) {
+        setError('Start date must be before or equal to end date');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -126,12 +146,30 @@ export default function SchedulePage() {
       const biz = businesses.find(b => b.slug === slug);
       if (!biz) throw new Error("Business not found");
       
-      await api.createTimeBlock(biz.publicId, selectedStaffId, {
-        blockDate: selectedDateStr,
-        startTime: fromTime + ':00',
-        endTime: toTime + ':00',
-        reason
-      });
+      if (blockMode === 'TIME') {
+        await api.createTimeBlock(biz.publicId, selectedStaffId, {
+          blockDate: selectedDateStr,
+          startTime: fromTime + ':00',
+          endTime: toTime + ':00',
+          reason
+        });
+      } else {
+        const start = new Date(offStartDate);
+        const end = new Date(offEndDate);
+        const promises = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          promises.push(
+            api.createTimeBlock(biz.publicId, selectedStaffId, {
+              blockDate: localDateISO(d),
+              startTime: '00:00:00',
+              endTime: '23:59:59',
+              reason: reason || 'Off day'
+            })
+          );
+        }
+        await Promise.all(promises);
+      }
+
       setIsModalOpen(false);
       setFromTime('09:00');
       setToTime('10:00');
@@ -163,7 +201,9 @@ export default function SchedulePage() {
   const getPositionStyles = (timeStr: string) => {
     // timeStr format: "HH:mm" or "HH:mm:ss"
     const [h, m] = timeStr.split(':').map(Number);
-    const totalMinutes = (h - 8) * 60 + m;
+    const renderH = Math.max(8, h);
+    const renderM = h < 8 ? 0 : m;
+    const totalMinutes = (renderH - 8) * 60 + renderM;
     const top = (totalMinutes / 60) * 4; // 4rem per hour
     return { top: `${top}rem` };
   };
@@ -171,9 +211,9 @@ export default function SchedulePage() {
   const getHeightStyles = (startStr: string, endStr: string) => {
     const [sh, sm] = startStr.split(':').map(Number);
     const [eh, em] = endStr.split(':').map(Number);
-    const startMins = sh * 60 + sm;
-    const endMins = eh * 60 + em;
-    const diff = endMins - startMins;
+    const startMins = Math.max(8 * 60, sh * 60 + sm);
+    const endMins = Math.min(21 * 60, eh * 60 + em);
+    const diff = Math.max(0, endMins - startMins);
     const height = (diff / 60) * 4;
     return { height: `${height}rem` };
   };
@@ -344,52 +384,96 @@ export default function SchedulePage() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Block Time">
         <form onSubmit={handleCreateBlock} className="space-y-4">
-          {error && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">{error}</div>}
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Date</label>
-            <input
-              type="text"
-              readOnly
-              value={selectedDate.toLocaleDateString()}
-              className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 sm:text-sm"
-            />
+          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 mb-4">
+            <button
+              type="button"
+              onClick={() => setBlockMode('TIME')}
+              className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-all ${blockMode === 'TIME' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Specific Time
+            </button>
+            <button
+              type="button"
+              onClick={() => setBlockMode('OFF_DAYS')}
+              className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-all ${blockMode === 'OFF_DAYS' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Off Days
+            </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">From</label>
-              <select
-                required
-                value={fromTime}
-                onChange={e => setFromTime(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
-              >
-                {Array.from({ length: 13 }, (_, h) => h + 8).flatMap(h =>
-                  [0, 15, 30, 45].map(m => {
-                    const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-                    return <option key={val} value={val}>{val}</option>;
-                  })
-                )}
-              </select>
+          {error && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">{error}</div>}
+          
+          {blockMode === 'TIME' ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Date</label>
+                <input
+                  type="text"
+                  readOnly
+                  value={selectedDate.toLocaleDateString()}
+                  className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 sm:text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">From</label>
+                  <select
+                    required
+                    value={fromTime}
+                    onChange={e => setFromTime(e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
+                  >
+                    {Array.from({ length: 13 }, (_, h) => h + 8).flatMap(h =>
+                      [0, 15, 30, 45].map(m => {
+                        const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                        return <option key={val} value={val}>{val}</option>;
+                      })
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">To</label>
+                  <select
+                    required
+                    value={toTime}
+                    onChange={e => setToTime(e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
+                  >
+                    {Array.from({ length: 13 }, (_, h) => h + 8).flatMap(h =>
+                      [0, 15, 30, 45].map(m => {
+                        const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                        return <option key={val} value={val}>{val}</option>;
+                      })
+                    )}
+                  </select>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <input
+                  type="date"
+                  required
+                  value={offStartDate}
+                  onChange={e => setOffStartDate(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">End Date</label>
+                <input
+                  type="date"
+                  required
+                  value={offEndDate}
+                  onChange={e => setOffEndDate(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">To</label>
-              <select
-                required
-                value={toTime}
-                onChange={e => setToTime(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
-              >
-                {Array.from({ length: 13 }, (_, h) => h + 8).flatMap(h =>
-                  [0, 15, 30, 45].map(m => {
-                    const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-                    return <option key={val} value={val}>{val}</option>;
-                  })
-                )}
-              </select>
-            </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Reason (Optional)</label>

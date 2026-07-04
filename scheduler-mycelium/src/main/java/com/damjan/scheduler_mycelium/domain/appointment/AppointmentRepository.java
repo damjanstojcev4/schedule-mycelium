@@ -38,4 +38,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
                         @Param("endTime") LocalDateTime endTime);
 
         Optional<Appointment> findByPublicId(UUID publicId);
+
+        @org.springframework.data.jpa.repository.Modifying
+        @Query("UPDATE Appointment a SET a.status = 'COMPLETED' WHERE a.status = 'BOOKED' AND a.endTime <= :now")
+        int completePastAppointments(@Param("now") LocalDateTime now);
 }
