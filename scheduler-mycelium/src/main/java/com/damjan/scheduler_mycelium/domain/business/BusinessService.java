@@ -127,6 +127,7 @@ public class BusinessService {
         return new BusinessSettingsResponseDTO(
                 business.getPublicId(),
                 settings.getCancellationCutoffHours(),
+                settings.getSlotMode(),
                 settings.getSlotIntervalMinutes()
         );
     }
@@ -141,14 +142,30 @@ public class BusinessService {
         BusinessSettings settings = businessSettingsRepository.findByBusinessId(business.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Settings not found for business"));
 
-        settings.setCancellationCutoffHours(request.getCancellationCutoffHours());
-        settings.setSlotIntervalMinutes(request.getSlotIntervalMinutes());
+        if (request.getCancellationCutoffHours() != null) {
+            settings.setCancellationCutoffHours(request.getCancellationCutoffHours());
+        }
+        if (request.getSlotMode() != null) {
+            if (!request.getSlotMode().equals("SERVICE_DRIVEN") &&
+                !request.getSlotMode().equals("INTERVAL_DRIVEN")) {
+                throw new IllegalArgumentException("slotMode must be SERVICE_DRIVEN or INTERVAL_DRIVEN");
+            }
+            settings.setSlotMode(request.getSlotMode());
+        }
+        if (request.getSlotIntervalMinutes() != null) {
+            if (request.getSlotIntervalMinutes() != 15 &&
+                request.getSlotIntervalMinutes() != 30) {
+                throw new IllegalArgumentException("slotIntervalMinutes must be 15 or 30");
+            }
+            settings.setSlotIntervalMinutes(request.getSlotIntervalMinutes());
+        }
 
         settings = businessSettingsRepository.save(settings);
 
         return new BusinessSettingsResponseDTO(
                 business.getPublicId(),
                 settings.getCancellationCutoffHours(),
+                settings.getSlotMode(),
                 settings.getSlotIntervalMinutes()
         );
     }

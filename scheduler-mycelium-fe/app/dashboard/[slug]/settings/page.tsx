@@ -34,6 +34,7 @@ export default function DashboardSettingsPage() {
 
   // Booking settings form state
   const [cutoffHours, setCutoffHours] = useState('');
+  const [slotMode, setSlotMode] = useState<'SERVICE_DRIVEN' | 'INTERVAL_DRIVEN'>('SERVICE_DRIVEN');
   const [slotInterval, setSlotInterval] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
@@ -68,6 +69,7 @@ export default function DashboardSettingsPage() {
         setSoloOperator(b.soloOperator);
         setSettings(s);
         setCutoffHours(String(s.cancellationCutoffHours));
+        setSlotMode(s.slotMode);
         setSlotInterval(String(s.slotIntervalMinutes));
       })
       .catch((e: Error) => setError(e.message))
@@ -103,13 +105,17 @@ export default function DashboardSettingsPage() {
     const cutoff = parseInt(cutoffHours, 10);
     const interval = parseInt(slotInterval, 10);
     if (isNaN(cutoff) || cutoff < 0) { setSettingsError('Cutoff hours must be 0 or more.'); return; }
-    if (isNaN(interval) || interval < 5) { setSettingsError('Slot interval must be at least 5 minutes.'); return; }
+    if (slotMode === 'INTERVAL_DRIVEN' && (isNaN(interval) || (interval !== 15 && interval !== 30))) { 
+      setSettingsError('Slot interval must be 15 or 30 minutes.'); 
+      return; 
+    }
     setSavingSettings(true);
     setSettingsError('');
     setSettingsSaved(false);
     try {
       await api.updateSettings(businessPublicId, {
         cancellationCutoffHours: cutoff,
+        slotMode,
         slotIntervalMinutes: interval,
       });
       setSettingsSaved(true);
@@ -213,14 +219,77 @@ export default function DashboardSettingsPage() {
             value={cutoffHours}
             onChange={(e) => setCutoffHours(e.target.value)}
           />
-          <Input
-            id="settings-interval"
-            label="Slot interval (minutes)"
-            type="number"
-            min="5"
-            value={slotInterval}
-            onChange={(e) => setSlotInterval(e.target.value)}
-          />
+          <div className="pt-4 border-t border-gray-100">
+            <h3 className="text-sm font-medium text-gray-900 mb-4">Slot Display Mode</h3>
+            
+            <div className="space-y-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="slotMode" 
+                  value="SERVICE_DRIVEN"
+                  checked={slotMode === 'SERVICE_DRIVEN'}
+                  onChange={() => setSlotMode('SERVICE_DRIVEN')}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">Service-driven</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Slots shown match your service duration.<br/>
+                    A 60-min service shows slots every 60 minutes.<br/>
+                    Recommended for most businesses.
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="slotMode" 
+                  value="INTERVAL_DRIVEN"
+                  checked={slotMode === 'INTERVAL_DRIVEN'}
+                  onChange={() => setSlotMode('INTERVAL_DRIVEN')}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">Interval-driven</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Slots shown at fixed intervals within working hours.<br/>
+                    Lets customers start at any 15 or 30-minute mark.<br/>
+                    Best if you manage your own schedule flexibly.
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {slotMode === 'INTERVAL_DRIVEN' && (
+              <div className="mt-6 ml-7">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Slot interval</h4>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                    <input 
+                      type="radio" 
+                      name="slotInterval" 
+                      value="15"
+                      checked={slotInterval === '15'}
+                      onChange={(e) => setSlotInterval(e.target.value)}
+                    />
+                    Every 15 minutes
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                    <input 
+                      type="radio" 
+                      name="slotInterval" 
+                      value="30"
+                      checked={slotInterval === '30'}
+                      onChange={(e) => setSlotInterval(e.target.value)}
+                    />
+                    Every 30 minutes
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
 
           <Button
             id="save-settings-btn"

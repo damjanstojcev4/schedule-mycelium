@@ -13,5 +13,6 @@ public class BusinessSettingsResponseDTO {
 
     private UUID businessPublicId;
     private Integer cancellationCutoffHours;
+    private String slotMode;
     private Integer slotIntervalMinutes;
 }

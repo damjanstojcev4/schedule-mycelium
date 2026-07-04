@@ -28,6 +28,9 @@ public class BusinessSettings {
     @Column(nullable = false)
     private Integer slotIntervalMinutes = 15;
 
+    @Column(nullable = false)
+    private String slotMode = "SERVICE_DRIVEN";
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

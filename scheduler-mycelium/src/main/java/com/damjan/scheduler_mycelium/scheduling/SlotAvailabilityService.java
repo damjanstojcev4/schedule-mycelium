@@ -117,6 +117,9 @@ public class SlotAvailabilityService {
         LocalTime workEnd = schedule.getWorkEnd();
         int durationMinutes = service.getDurationMinutes();
         int slotIntervalMinutes = settings.getSlotIntervalMinutes();
+        int slotStep = "INTERVAL_DRIVEN".equals(settings.getSlotMode())
+            ? settings.getSlotIntervalMinutes()
+            : durationMinutes;
 
         // Fetch blocks scoped to the staff member. Also fetch all blocks for the
         // business
@@ -207,7 +210,7 @@ public class SlotAvailabilityService {
 
                 if (!appointmentRepository.existsOverlappingAppointment(staffId, startDateTime, endDateTime)) {
                     availableSlots.add(currentSlot);
-                    currentSlot = currentSlot.plusMinutes(durationMinutes);
+                    currentSlot = currentSlot.plusMinutes(slotStep);
                 } else {
                     // Slot is within working hours but already booked
                     unavailableSlots.add(currentSlot);

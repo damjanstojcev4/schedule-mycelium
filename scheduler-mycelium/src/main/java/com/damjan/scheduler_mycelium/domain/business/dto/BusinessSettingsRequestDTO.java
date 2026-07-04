@@ -13,6 +13,7 @@ public class BusinessSettingsRequestDTO {
     @NotNull
     private Integer cancellationCutoffHours;
 
-    @NotNull
+    private String slotMode;
+
     private Integer slotIntervalMinutes;
 }

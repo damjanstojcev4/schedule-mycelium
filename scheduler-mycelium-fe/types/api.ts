@@ -72,6 +72,7 @@ export interface UpdateBusinessRequest {
 
 export interface BusinessSettings {
   cancellationCutoffHours: number;
+  slotMode: 'SERVICE_DRIVEN' | 'INTERVAL_DRIVEN';
   slotIntervalMinutes: number;
 }
 
