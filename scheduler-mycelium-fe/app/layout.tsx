@@ -6,9 +6,30 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Scheduler Mycelium — Book Appointments Online',
+  metadataBase: new URL('https://scheduler.mycelium.com'), // Replace with actual production domain
+  title: {
+    default: 'Scheduler Mycelium — Book Appointments Online',
+    template: '%s | Scheduler Mycelium',
+  },
   description:
-    'Multi-tenant appointment scheduling for local businesses. Book services, manage your schedule, and grow your business.',
+    'Multi-tenant appointment scheduling for local businesses. Book services, manage your schedule, and grow your business with a premium booking experience.',
+  keywords: ['appointment scheduling', 'booking software', 'local business software', 'calendar scheduling', 'service booking'],
+  openGraph: {
+    title: 'Scheduler Mycelium — Premium Booking Software',
+    description: 'The easiest way to schedule appointments for your business. Share your link and start accepting bookings today.',
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Scheduler Mycelium',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Scheduler Mycelium — Premium Booking Software',
+    description: 'The easiest way to schedule appointments for your business. Share your link and start accepting bookings today.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  }
 };
 
 export default function RootLayout({

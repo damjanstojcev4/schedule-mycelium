@@ -59,7 +59,8 @@ export default function DashboardAppointmentsPage() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('ALL');
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
+  const [calendarMode, setCalendarMode] = useState<'day' | 'week' | 'month'>('day');
   const [calendarDate, setCalendarDate] = useState(localDateISO(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<{ staff: StaffMember; timeString: string } | null>(null);
   const [timeBlocks, setTimeBlocks] = useState<Record<string, TimeBlockResponse[]>>({});
@@ -204,16 +205,16 @@ export default function DashboardAppointmentsPage() {
         action={
           <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
             <button 
-              onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
-            >
-              List View
-            </button>
-            <button 
               onClick={() => setViewMode('calendar')}
               className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
             >
               Calendar View
+            </button>
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
+            >
+              List View
             </button>
           </div>
         }
@@ -276,47 +277,79 @@ export default function DashboardAppointmentsPage() {
       )}
 
       {!loading && viewMode === 'calendar' && (
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-zinc-200 p-4 rounded-xl shadow-sm">
+        <div className="mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white border border-zinc-200 p-4 rounded-xl shadow-sm">
           <div>
             <h3 className="text-lg font-bold text-zinc-900">
-              {new Date(calendarDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              {calendarMode === 'month' 
+                ? new Date(calendarDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                : calendarMode === 'week'
+                ? `Week of ${new Date(calendarDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                : new Date(calendarDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+              }
             </h3>
-            <p className="text-xs text-zinc-500">Select a day to view schedule</p>
+            <p className="text-xs text-zinc-500">
+              {calendarMode === 'month' ? 'Select a month' : calendarMode === 'week' ? 'Select a week' : 'Select a day'} to view schedule
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-3">
-            <button
-              onClick={() => {
-                const d = new Date(calendarDate);
-                d.setDate(d.getDate() - 1);
-                setCalendarDate(localDateISO(d));
-              }}
-              className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
-            >
-              <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <input
-              type="date"
-              value={calendarDate}
-              onChange={(e) => setCalendarDate(e.target.value)}
-              className="px-3 py-2 border border-zinc-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-zinc-900 focus:outline-none"
-            />
-            <button
-              onClick={() => {
-                const d = new Date(calendarDate);
-                d.setDate(d.getDate() + 1);
-                setCalendarDate(localDateISO(d));
-              }}
-              className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
-            >
-              <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+            <div className="flex w-full md:w-auto bg-zinc-100 p-1 rounded-lg border border-zinc-200">
+              {['day', 'week', 'month'].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setCalendarMode(mode as any)}
+                  className={`flex-1 md:flex-none px-3 py-1.5 text-sm font-semibold rounded-md transition-all capitalize ${calendarMode === mode ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex w-full md:w-auto items-center gap-2 justify-between md:justify-start">
+              <button
+                onClick={() => {
+                  const d = new Date(calendarDate);
+                  if (calendarMode === 'month') d.setMonth(d.getMonth() - 1);
+                  else if (calendarMode === 'week') d.setDate(d.getDate() - 7);
+                  else d.setDate(d.getDate() - 1);
+                  setCalendarDate(localDateISO(d));
+                }}
+                className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+              >
+                <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <input
+                type="date"
+                value={calendarDate}
+                onChange={(e) => setCalendarDate(e.target.value)}
+                className="flex-1 md:flex-none min-w-[130px] px-3 py-2 border border-zinc-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-zinc-900 focus:outline-none"
+              />
+              <button
+                onClick={() => {
+                  const d = new Date(calendarDate);
+                  if (calendarMode === 'month') d.setMonth(d.getMonth() + 1);
+                  else if (calendarMode === 'week') d.setDate(d.getDate() + 7);
+                  else d.setDate(d.getDate() + 1);
+                  setCalendarDate(localDateISO(d));
+                }}
+                className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+              >
+                <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setCalendarDate(localDateISO(new Date()))}
+                className="hidden md:block px-3 py-2 bg-zinc-900 text-white text-sm font-semibold rounded-lg hover:bg-zinc-800 transition-colors"
+              >
+                Today
+              </button>
+            </div>
+            
             <button
               onClick={() => setCalendarDate(localDateISO(new Date()))}
-              className="px-3 py-2 bg-zinc-900 text-white text-sm font-semibold rounded-lg hover:bg-zinc-800 transition-colors"
+              className="md:hidden w-full px-3 py-2 bg-zinc-900 text-white text-sm font-semibold rounded-lg hover:bg-zinc-800 transition-colors mt-1"
             >
               Today
             </button>
@@ -372,6 +405,7 @@ export default function DashboardAppointmentsPage() {
       
       {!loading && viewMode === 'calendar' && (
         <CalendarView
+          mode={calendarMode}
           appointments={appointments}
           staffList={staffList}
           timeBlocks={timeBlocks}
