@@ -18,13 +18,11 @@ export async function generateMetadata(
       openGraph: {
         title: `${business.name} | Book Appointment`,
         description: `Book your next appointment with ${business.name}. Select a service, choose a time, and confirm your booking instantly.`,
-        images: ['/opengraph-image.png'],
       },
       twitter: {
         card: 'summary_large_image',
         title: `${business.name} | Book Appointment`,
         description: `Book your next appointment with ${business.name}. Select a service, choose a time, and confirm your booking instantly.`,
-        images: ['/twitter-image.png'],
       }
     };
   } catch (e) {

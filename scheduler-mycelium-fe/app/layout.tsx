@@ -6,7 +6,6 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://scheduler.mycelium.com'), // Replace with actual production domain
   title: {
     default: 'Scheduler Mycelium — Book Appointments Online',
     template: '%s | Scheduler Mycelium',
