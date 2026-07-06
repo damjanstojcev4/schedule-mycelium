@@ -31,6 +31,9 @@ public class WebhookService {
     @Value("${webhook.booking-cancelled-url}")
     private String bookingCancelledUrl;
 
+    @Value("${webhook.password-reset-url}")
+    private String passwordResetUrl;
+
     // Named bean from WebhookConfig — configured with 5s connect / 10s read timeouts.
     private final RestClient restClient;
 
@@ -46,6 +49,20 @@ public class WebhookService {
     public void sendCancellationNotification(Appointment appointment) {
         Map<String, Object> payload = buildPayload(appointment, "CANCELLED");
         fireWebhook(bookingCancelledUrl, payload);
+    }
+
+    public void sendPasswordResetLink(com.damjan.scheduler_mycelium.domain.account.Account account, String resetLink) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("event", "PASSWORD_RESET");
+        payload.put("email", account.getEmail());
+        payload.put("resetLink", resetLink);
+        
+        // Add name if available
+        if (account.getRole() == com.damjan.scheduler_mycelium.domain.account.Account.Role.CUSTOMER) {
+            payload.put("name", account.getEmail().split("@")[0]); // AccountService sets name in customer, but it's okay to just send email. Wait, I can just send what's available
+        }
+        
+        fireWebhook(passwordResetUrl, payload);
     }
 
     private Map<String, Object> buildPayload(Appointment appointment, String event) {

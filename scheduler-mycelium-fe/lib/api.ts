@@ -99,6 +99,24 @@ export const api = {
       body: JSON.stringify(body),
     }, false),
 
+  forgotPassword: (email: string) =>
+    request<void>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }, false),
+
+  resetPassword: (token: string, newPassword: string) =>
+    request<void>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }, false),
+
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<void>('/api/accounts/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ oldPassword, newPassword }),
+    }),
+
   // ─── Business ───────────────────────────────────────────────────────────────
 
   createBusiness: (body: CreateBusinessRequest) =>

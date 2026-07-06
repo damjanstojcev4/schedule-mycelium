@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 
-const WEBHOOK_URL = 'https://n8n.myceliumagency.cloud/webhook-test/demo-request';
+
 
 type FormState = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -31,7 +31,7 @@ export function DemoRequestForm() {
     setErrorMsg('');
 
     try {
-      const res = await fetch(WEBHOOK_URL, {
+      const res = await fetch('/api/demo-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

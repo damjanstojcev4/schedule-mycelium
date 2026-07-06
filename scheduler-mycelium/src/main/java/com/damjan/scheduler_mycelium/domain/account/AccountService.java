@@ -12,10 +12,14 @@ import com.damjan.scheduler_mycelium.domain.staff.StaffMember;
 import com.damjan.scheduler_mycelium.domain.staff.StaffMemberRepository;
 import com.damjan.scheduler_mycelium.exception.UnauthorizedException;
 import com.damjan.scheduler_mycelium.security.JwtUtil;
+import com.damjan.scheduler_mycelium.webhook.WebhookService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +35,10 @@ public class AccountService {
     private final StaffMemberRepository staffMemberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final WebhookService webhookService;
+
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
 
     @Transactional
     public AuthResponseDTO register(RegisterRequestDTO request) {
@@ -159,5 +167,46 @@ public class AccountService {
                         account.getCreatedAt()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void generatePasswordResetToken(String email) {
+        accountRepository.findByEmail(email).ifPresent(account -> {
+            String token = UUID.randomUUID().toString();
+            account.setResetToken(token);
+            account.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
+            accountRepository.save(account);
+
+            String resetLink = frontendUrl + "/reset-password?token=" + token;
+            webhookService.sendPasswordResetLink(account, resetLink);
+        });
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        Account account = accountRepository.findByResetToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token"));
+
+        if (account.getResetTokenExpiry() == null || account.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Invalid or expired reset token");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(newPassword));
+        account.setResetToken(null);
+        account.setResetTokenExpiry(null);
+        accountRepository.save(account);
+    }
+
+    @Transactional
+    public void changePassword(String email, String oldPassword, String newPassword) {
+        Account account = accountRepository.findByEmail(email)
+                .orElseThrow(() -> new UnauthorizedException("Account not found"));
+
+        if (!passwordEncoder.matches(oldPassword, account.getPasswordHash())) {
+            throw new IllegalArgumentException("Incorrect old password");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(newPassword));
+        accountRepository.save(account);
     }
 }

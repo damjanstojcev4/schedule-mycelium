@@ -195,6 +195,12 @@ export default function StaffSchedulePage() {
             <div className="flex items-center gap-3">
               <span className="hidden sm:block text-xs text-zinc-400 font-medium">{auth?.email}</span>
               <button
+                onClick={() => router.push(`/staff/${slug}/settings`)}
+                className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500"
+              >
+                Settings
+              </button>
+              <button
                 onClick={logout}
                 className="text-xs font-semibold text-zinc-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500"
               >

@@ -103,17 +103,26 @@ export default function LoginPage() {
                 required
               />
 
-              <Input
-                id="login-password"
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={errors.password}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-              />
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="login-password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-gray-900 transition-colors">
+                    Forgot Password?
+                  </Link>
+                </div>
+                <Input
+                  id="login-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  error={errors.password}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
 
               <Button
                 id="login-submit-btn"

@@ -1,8 +1,10 @@
 package com.damjan.scheduler_mycelium.domain.account;
 
 import com.damjan.scheduler_mycelium.domain.account.dto.AuthResponseDTO;
+import com.damjan.scheduler_mycelium.domain.account.dto.ForgotPasswordRequestDTO;
 import com.damjan.scheduler_mycelium.domain.account.dto.LoginRequestDTO;
 import com.damjan.scheduler_mycelium.domain.account.dto.RegisterRequestDTO;
+import com.damjan.scheduler_mycelium.domain.account.dto.ResetPasswordRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -47,5 +49,26 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(accountService.login(request));
+    }
+
+    @Operation(summary = "Forgot Password", description = "Sends a password reset link if email exists.")
+    @ApiResponse(responseCode = "200", description = "Reset link sent (if email exists)")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request) {
+        accountService.generatePasswordResetToken(request.getEmail());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Reset Password", description = "Resets password using a valid token.")
+    @ApiResponse(responseCode = "200", description = "Password reset successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid or expired token")
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
+        try {
+            accountService.resetPassword(request.getToken(), request.getNewPassword());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { ChangePasswordForm } from '@/components/auth/ChangePasswordForm';
 import type { BusinessBookingPage, BusinessSettings } from '@/types/api';
 
 export default function DashboardSettingsPage() {
@@ -300,6 +301,9 @@ export default function DashboardSettingsPage() {
           </Button>
         </div>
       )}
+
+      {/* Change Password */}
+      <ChangePasswordForm />
     </div>
   );
 }

@@ -74,6 +74,8 @@ public class SecurityConfig {
                 // ── Public auth ────────────────────────────────────────────
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
 
                 // ── Public business browsing ───────────────────────────────
                 .requestMatchers(HttpMethod.GET,  "/api/businesses").permitAll()
