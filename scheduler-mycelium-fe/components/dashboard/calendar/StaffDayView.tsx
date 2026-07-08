@@ -74,7 +74,7 @@ export function StaffDayView(props: CalendarViewProps) {
                     <p className="text-[10px] text-zinc-500 leading-tight">{staff.roleTitle}</p>
                   </div>
                   <div className="relative h-[1248px]">
-                    <div className="absolute inset-0 z-0 cursor-pointer"
+                    <div className="absolute inset-0 z-0 cursor-pointer hidden md:block"
                       onMouseMove={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const y = e.clientY - rect.top;

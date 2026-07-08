@@ -42,4 +42,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         @org.springframework.data.jpa.repository.Modifying
         @Query("UPDATE Appointment a SET a.status = 'COMPLETED' WHERE a.status = 'BOOKED' AND a.endTime <= :now")
         int completePastAppointments(@Param("now") LocalDateTime now);
+
+        // ─── Reporting ────────────────────────────────────────────────────────────
+
+        /**
+         * Returns all appointments for a business whose startTime falls within
+         * [from, to) — used exclusively by the Reports service.
+         * The idx_appointment_business and idx_appointment_start_time indexes
+         * cover this query efficiently.
+         */
+        List<Appointment> findByBusinessIdAndStartTimeBetween(
+                Long businessId,
+                LocalDateTime from,
+                LocalDateTime to);
 }

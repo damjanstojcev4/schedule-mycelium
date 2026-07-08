@@ -135,21 +135,21 @@ export default function SuperAdminDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/admin/businesses">
               <div className="hover:scale-[1.01] active:scale-[0.99] transition-transform cursor-pointer">
-                <StatsCard label="Businesses" value={totalBusinesses} icon={<BusinessesIcon />} color="blue" />
+                <StatsCard label="Businesses" value={totalBusinesses} icon={<BusinessesIcon />} />
               </div>
             </Link>
             <Link href="/admin/accounts">
               <div className="hover:scale-[1.01] active:scale-[0.99] transition-transform cursor-pointer">
-                <StatsCard label="Accounts" value={totalAccounts} icon={<UsersIcon />} color="gray" />
+                <StatsCard label="Accounts" value={totalAccounts} icon={<UsersIcon />} />
               </div>
             </Link>
             <Link href="/admin/appointments">
               <div className="hover:scale-[1.01] active:scale-[0.99] transition-transform cursor-pointer">
-                <StatsCard label="Total Bookings" value={totalAppointments} icon={<CalendarIcon />} color="yellow" />
+                <StatsCard label="Total Bookings" value={totalAppointments} icon={<CalendarIcon />} />
               </div>
             </Link>
             <div className="cursor-default">
-              <StatsCard label="Completed Bookings" value={completedCount} icon={<CompletedIcon />} color="green" />
+              <StatsCard label="Completed Bookings" value={completedCount} icon={<CompletedIcon />} />
             </div>
           </div>
 
