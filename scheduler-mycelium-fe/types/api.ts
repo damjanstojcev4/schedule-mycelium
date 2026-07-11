@@ -230,3 +230,24 @@ export interface OwnerBookAppointmentRequest {
   customerPhone?: string;
   notes?: string;
 }
+
+// ─── Public cancellation ─────────────────────────────────────────────────────
+
+export interface GuestAppointmentDTO {
+  publicId: string;
+  businessName: string;
+  businessSlug: string;
+  businessPhone: string;
+  serviceName: string;
+  startTime: string;
+  endTime: string;
+  canCancel: boolean;
+}
+
+export interface CancelConfirmationDTO {
+  message: string;
+  businessName: string;
+  serviceName: string;
+  startTime: string;
+  businessSlug: string;
+}

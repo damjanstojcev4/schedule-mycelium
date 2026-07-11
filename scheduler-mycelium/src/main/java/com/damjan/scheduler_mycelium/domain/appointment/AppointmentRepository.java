@@ -43,6 +43,29 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         @Query("UPDATE Appointment a SET a.status = 'COMPLETED' WHERE a.status = 'BOOKED' AND a.endTime <= :now")
         int completePastAppointments(@Param("now") LocalDateTime now);
 
+        // ─── Public cancellation ──────────────────────────────────────────────────
+
+        /**
+         * Returns upcoming BOOKED appointments matching a guest email or a registered
+         * customer's account email. Used exclusively by the public cancellation flow.
+         * Case-insensitive comparison via LOWER() — caller must pass a lower-cased email.
+         */
+        @Query("""
+                SELECT a FROM Appointment a
+                LEFT JOIN a.customer c
+                LEFT JOIN c.account acc
+                WHERE a.status = 'BOOKED'
+                AND a.startTime > :now
+                AND (
+                    LOWER(a.guestEmail) = LOWER(:email)
+                    OR (c IS NOT NULL AND LOWER(acc.email) = LOWER(:email))
+                )
+                ORDER BY a.startTime ASC
+                """)
+        List<Appointment> findBookedByGuestEmailOrCustomerEmail(
+                @Param("email") String email,
+                @Param("now") LocalDateTime now);
+
         // ─── Reporting ────────────────────────────────────────────────────────────
 
         /**

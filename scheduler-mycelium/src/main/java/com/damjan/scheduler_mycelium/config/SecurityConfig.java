@@ -121,6 +121,9 @@ public class SecurityConfig {
                 // ── Admin (SUPER_ADMIN only) ───────────────────────────────
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_SUPER_ADMIN")
 
+                // ── Public guest cancellation ─────────────────────────────────────
+                .requestMatchers("/api/public/**").permitAll()
+
                 // ── Everything else requires a valid JWT ───────────────────
                 .anyRequest().authenticated()
             )

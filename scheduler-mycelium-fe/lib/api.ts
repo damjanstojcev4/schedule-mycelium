@@ -343,4 +343,20 @@ export const api = {
 
   adminGetAppointments: () =>
     request<Appointment[]>('/api/admin/appointments'),
+
+  // ─── Public cancellation (no auth) ─────────────────────────────────────────
+
+  getAppointmentsByEmail: (email: string) =>
+    request<import('@/types/api').GuestAppointmentDTO[]>(
+      `/api/public/appointments?email=${encodeURIComponent(email)}`,
+      {},
+      false,
+    ),
+
+  cancelByEmail: (publicId: string, email: string) =>
+    request<import('@/types/api').CancelConfirmationDTO>(
+      `/api/public/appointments/${publicId}/cancel`,
+      { method: 'POST', body: JSON.stringify({ email }) },
+      false,
+    ),
 };

@@ -98,6 +98,12 @@ public class WebhookService {
             payload.put("isGuest", false);
         }
 
+        // Guest cancellation link — guests enter their email on the /cancel page
+        // Only relevant for the CONFIRMED event (not CANCELLED)
+        if ("CONFIRMED".equals(event)) {
+            payload.put("cancellationUrl", "https://schedule-mycelium.vercel.app/cancel");
+        }
+
         return payload;
     }
 
