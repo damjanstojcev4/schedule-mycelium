@@ -4,6 +4,7 @@ import com.damjan.scheduler_mycelium.security.JwtAuthFilter;
 import com.damjan.scheduler_mycelium.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -31,12 +38,34 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
 
+    /**
+     * When true (default), Spring handles CORS — needed for local development.
+     * Set to false in production where a reverse proxy (Nginx) adds CORS headers,
+     * to avoid duplicate Access-Control-Allow-Origin headers.
+     */
+    @Value("${cors.enabled:true}")
+    private boolean corsEnabled;
+
+    /**
+     * Allowed CORS origins (only used when cors.enabled=true).
+     * Comma-separated, e.g.: https://app.yourdomain.com,https://yourdomain.com
+     * Defaults to localhost for local development.
+     */
+    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
+    private String corsAllowedOrigins;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // CORS is handled by the reverse proxy (Nginx) — disable Spring's CORS
-            // processing to avoid duplicate Access-Control-Allow-Origin headers.
-            .cors(AbstractHttpConfigurer::disable)
+            // In production CORS is handled by the reverse proxy (Nginx).
+            // Locally (no proxy) Spring handles it via corsConfigurationSource().
+            .cors(cors -> {
+                if (corsEnabled) {
+                    cors.configurationSource(corsConfigurationSource());
+                } else {
+                    cors.disable();
+                }
+            })
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -101,6 +130,25 @@ public class SecurityConfig {
         return http.build();
     }
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(origins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 
     @Bean
     public AuthenticationProvider authenticationProvider() {

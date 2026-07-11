@@ -32,10 +32,31 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly fieldErrors?: Record<string, string>,
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * Turn a `fieldErrors` map like `{ "name": "must not be blank" }` into a
+ * single human-readable string: "Name must not be blank."
+ */
+function formatFieldErrors(fieldErrors: Record<string, string>): string {
+  return Object.entries(fieldErrors)
+    .map(([field, msg]) => {
+      // camelCase → Title Case (e.g. "durationMinutes" → "Duration minutes")
+      const label = field
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, (c) => c.toUpperCase())
+        .trim();
+      // Capitalize the first letter of msg if it isn't already
+      const sentence = msg.charAt(0).toUpperCase() + msg.slice(1);
+      // Avoid "Name Must not be blank." → "Name: must not be blank."
+      return `${label}: ${msg}`;
+    })
+    .join('\n');
 }
 
 async function request<T>(
@@ -69,15 +90,26 @@ async function request<T>(
 
   if (!res.ok) {
     let message = res.statusText;
+    let fieldErrors: Record<string, string> | undefined;
     try {
       const cloned = res.clone();
-      const body = await cloned.json() as { message?: string; error?: string };
-      message = body.message ?? body.error ?? JSON.stringify(body);
+      const body = await cloned.json() as {
+        message?: string;
+        error?: string;
+        fieldErrors?: Record<string, string>;
+      };
+      fieldErrors = body.fieldErrors;
+      if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+        // Build a human-readable message from per-field validation errors
+        message = formatFieldErrors(fieldErrors);
+      } else {
+        message = body.message ?? body.error ?? JSON.stringify(body);
+      }
     } catch {
       const text = await res.text();
       if (text) message = text;
     }
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, fieldErrors);
   }
 
   if (res.status === 204) return undefined as T;

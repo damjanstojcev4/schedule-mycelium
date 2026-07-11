@@ -117,10 +117,10 @@ export default function DashboardServicesPage() {
   async function handleSave() {
     if (!businessPublicId) { setFormError('Business public ID is missing.'); return; }
     const dur = parseInt(form.durationMinutes, 10);
-    const price = parseInt(form.price, 10);
+    const price = parseFloat(form.price);
     if (!form.name.trim()) { setFormError('Name is required.'); return; }
     if (isNaN(dur) || dur < 1) { setFormError('Duration must be a positive number.'); return; }
-    if (isNaN(price) || price < 0) { setFormError('Price must be 0 or more.'); return; }
+    if (isNaN(price) || price <= 0) { setFormError('Price must be greater than 0.'); return; }
 
     setSaving(true);
     setFormError('');

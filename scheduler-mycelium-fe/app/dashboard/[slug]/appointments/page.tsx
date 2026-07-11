@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import type { Appointment, StaffMember, Service, TimeBlockResponse, StaffScheduleResponseDTO } from '@/types/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { localDateISO } from '@/lib/format';
+import { GlobalActionModal } from '@/components/dashboard/GlobalActionModal';
 
 type StatusFilter = 'ALL' | 'BOOKED' | 'COMPLETED' | 'CANCELLED';
 type DateFilter = 'TODAY' | 'WEEK' | 'ALL';
@@ -62,6 +63,7 @@ export default function DashboardAppointmentsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
   const [calendarMode, setCalendarMode] = useState<'day' | 'week' | 'month'>('day');
   const [calendarDate, setCalendarDate] = useState(localDateISO(new Date()));
+  const [isGlobalModalOpen, setIsGlobalModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ staff: StaffMember; timeString: string } | null>(null);
   const [timeBlocks, setTimeBlocks] = useState<Record<string, TimeBlockResponse[]>>({});
   const [schedules, setSchedules] = useState<Record<string, StaffScheduleResponseDTO>>({});
@@ -203,18 +205,29 @@ export default function DashboardAppointmentsPage() {
         title="Appointments" 
         description="Manage all bookings for your business."
         action={
-          <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
-            <button 
-              onClick={() => setViewMode('calendar')}
-              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
+          <div className="flex items-center gap-3">
+            <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
+              <button 
+                onClick={() => setViewMode('calendar')}
+                className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
+              >
+                Calendar
+              </button>
+              <button 
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
+              >
+                List
+              </button>
+            </div>
+            <button
+              onClick={() => setIsGlobalModalOpen(true)}
+              className="inline-flex items-center gap-1.5 bg-zinc-900 text-white px-3.5 py-2 rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-colors active:scale-[0.97]"
             >
-              Calendar View
-            </button>
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'}`}
-            >
-              List View
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add...
             </button>
           </div>
         }
@@ -433,6 +446,20 @@ export default function DashboardAppointmentsPage() {
           businessPublicId={auth.businessPublicId}
           onSuccess={() => {
             setSelectedSlot(null);
+            fetchData();
+            fetchTimeBlocks();
+          }}
+        />
+      )}
+
+      {auth?.businessPublicId && auth?.slug && (
+        <GlobalActionModal
+          isOpen={isGlobalModalOpen}
+          onClose={() => setIsGlobalModalOpen(false)}
+          slug={auth.slug}
+          businessPublicId={auth.businessPublicId}
+          staffList={staffList}
+          onSuccess={() => {
             fetchData();
             fetchTimeBlocks();
           }}

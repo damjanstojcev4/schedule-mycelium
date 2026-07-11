@@ -79,6 +79,7 @@ export default function DashboardSettingsPage() {
 
   async function handleSaveBiz() {
     if (!businessPublicId) { setBizError('Business public ID is missing.'); return; }
+    if (!name.trim()) { setBizError('Business name is required.'); return; }
     setSavingBiz(true);
     setBizError('');
     setBizSaved(false);

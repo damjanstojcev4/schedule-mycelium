@@ -172,7 +172,7 @@ export function SlotActionModal({
           </>
         )}
 
-        <div className="pt-4 flex justify-end gap-3">
+        <div className="pt-4 flex justify-center sm:justify-end gap-3">
           <Button variant="secondary" onClick={onClose} type="button">
             Cancel
           </Button>
