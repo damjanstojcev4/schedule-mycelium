@@ -251,3 +251,10 @@ export interface CancelConfirmationDTO {
   startTime: string;
   businessSlug: string;
 }
+
+// ─── Google Calendar ──────────────────────────────────────────────────────────
+
+export interface CalendarStatusDTO {
+  connected: boolean;
+  googleEmail: string | null;
+}

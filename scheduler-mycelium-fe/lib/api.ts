@@ -10,6 +10,7 @@ import type {
   Business,
   BusinessBookingPage,
   BusinessSettings,
+  CalendarStatusDTO,
   CreateBusinessRequest,
   CreateServiceRequest,
   CreateStaffRequest,
@@ -359,4 +360,15 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ email }) },
       false,
     ),
+
+  // ─── Google Calendar ─────────────────────────────────────────────────────────
+
+  getCalendarStatus: () =>
+    request<CalendarStatusDTO>('/api/calendar/status'),
+
+  getCalendarConnectUrl: () =>
+    request<{ authorizationUrl: string }>('/api/calendar/connect'),
+
+  disconnectCalendar: () =>
+    request<void>('/api/calendar/disconnect', { method: 'DELETE' }),
 };

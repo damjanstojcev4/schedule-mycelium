@@ -1,5 +1,6 @@
 package com.damjan.scheduler_mycelium.domain.appointment;
 
+import com.damjan.scheduler_mycelium.calendar.GoogleCalendarService;
 import com.damjan.scheduler_mycelium.domain.account.Account;
 import com.damjan.scheduler_mycelium.domain.appointment.dto.AppointmentResponseDTO;
 import com.damjan.scheduler_mycelium.domain.appointment.dto.BookAppointmentRequestDTO;
@@ -21,6 +22,7 @@ import com.damjan.scheduler_mycelium.security.TenantGuard;
 import com.damjan.scheduler_mycelium.security.UserDetailsServiceImpl;
 import com.damjan.scheduler_mycelium.webhook.WebhookService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
+@Slf4j
 public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
@@ -43,6 +46,7 @@ public class AppointmentService {
     private final SlotAvailabilityService slotAvailabilityService;
     private final TenantGuard tenantGuard;
     private final WebhookService webhookService;
+    private final GoogleCalendarService googleCalendarService;
 
     @Transactional
     public AppointmentResponseDTO bookAppointment(BookAppointmentRequestDTO request, Authentication auth) {
@@ -86,6 +90,20 @@ public class AppointmentService {
 
         Appointment saved = appointmentRepository.save(appointment);
         webhookService.sendBookingConfirmation(saved);
+
+        // Try to create a Google Calendar event — fails silently, never breaks booking
+        try {
+            Long ownerAccountId = saved.getBusiness().getOwner().getId();
+            String googleEventId = googleCalendarService.createCalendarEvent(ownerAccountId, saved);
+            if (googleEventId != null) {
+                saved.setGoogleEventId(googleEventId);
+                appointmentRepository.save(saved);
+            }
+        } catch (Exception e) {
+            log.warn("Google Calendar event creation failed for appointment {}: {}",
+                saved.getPublicId(), e.getMessage());
+        }
+
         return mapToAppointmentResponse(saved);
     }
 
@@ -133,6 +151,20 @@ public class AppointmentService {
 
         Appointment saved = appointmentRepository.save(appointment);
         webhookService.sendBookingConfirmation(saved);
+
+        // Try to create a Google Calendar event — fails silently, never breaks booking
+        try {
+            Long ownerAccountId = saved.getBusiness().getOwner().getId();
+            String googleEventId = googleCalendarService.createCalendarEvent(ownerAccountId, saved);
+            if (googleEventId != null) {
+                saved.setGoogleEventId(googleEventId);
+                appointmentRepository.save(saved);
+            }
+        } catch (Exception e) {
+            log.warn("Google Calendar event creation failed for appointment {}: {}",
+                saved.getPublicId(), e.getMessage());
+        }
+
         return mapToAppointmentResponse(saved);
     }
 
@@ -189,11 +221,24 @@ public class AppointmentService {
         appointment.setNotes(request.getNotes());
 
         Appointment saved = appointmentRepository.save(appointment);
-        
+
         if (request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank()) {
             webhookService.sendBookingConfirmation(saved);
         }
-        
+
+        // Try to create a Google Calendar event — fails silently, never breaks booking
+        try {
+            Long ownerAccountId = saved.getBusiness().getOwner().getId();
+            String googleEventId = googleCalendarService.createCalendarEvent(ownerAccountId, saved);
+            if (googleEventId != null) {
+                saved.setGoogleEventId(googleEventId);
+                appointmentRepository.save(saved);
+            }
+        } catch (Exception e) {
+            log.warn("Google Calendar event creation failed for appointment {}: {}",
+                saved.getPublicId(), e.getMessage());
+        }
+
         return mapToAppointmentResponse(saved);
     }
 
@@ -218,6 +263,18 @@ public class AppointmentService {
             appointment.setCancelledBy(Appointment.CancelledBy.BUSINESS_OWNER);
             Appointment saved = appointmentRepository.save(appointment);
             webhookService.sendCancellationNotification(saved);
+
+            // Try to delete the Google Calendar event — fails silently
+            try {
+                if (saved.getGoogleEventId() != null) {
+                    Long ownerAccountId = saved.getBusiness().getOwner().getId();
+                    googleCalendarService.deleteCalendarEvent(ownerAccountId, saved.getGoogleEventId());
+                }
+            } catch (Exception e) {
+                log.warn("Google Calendar event deletion failed for appointment {}: {}",
+                    saved.getPublicId(), e.getMessage());
+            }
+
             return mapToAppointmentResponse(saved);
         }
 
@@ -259,6 +316,18 @@ public class AppointmentService {
         appointment.setCancelledBy(cancelledBy);
         Appointment saved = appointmentRepository.save(appointment);
         webhookService.sendCancellationNotification(saved);
+
+        // Try to delete the Google Calendar event — fails silently
+        try {
+            if (saved.getGoogleEventId() != null) {
+                Long ownerAccountId = saved.getBusiness().getOwner().getId();
+                googleCalendarService.deleteCalendarEvent(ownerAccountId, saved.getGoogleEventId());
+            }
+        } catch (Exception e) {
+            log.warn("Google Calendar event deletion failed for appointment {}: {}",
+                saved.getPublicId(), e.getMessage());
+        }
+
         return mapToAppointmentResponse(saved);
     }
 

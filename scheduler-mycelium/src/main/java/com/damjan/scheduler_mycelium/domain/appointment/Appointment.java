@@ -81,6 +81,11 @@ public class Appointment {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    // Google Calendar event ID — stored for deletion when appointment is cancelled.
+    // Null if the business owner has not connected Google Calendar, or if sync failed.
+    @Column(name = "google_event_id")
+    private String googleEventId;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

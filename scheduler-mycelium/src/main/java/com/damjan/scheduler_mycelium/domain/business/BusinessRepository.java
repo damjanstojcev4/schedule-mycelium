@@ -1,6 +1,8 @@
 package com.damjan.scheduler_mycelium.domain.business;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,4 +20,7 @@ public interface BusinessRepository extends JpaRepository<Business, Long> {
     Optional<Business> findBySlug(String slug);
 
     boolean existsBySlug(String slug);
+
+    @Query("SELECT b.slug FROM Business b WHERE b.owner.id = :ownerId")
+    Optional<String> findSlugByOwnerId(@Param("ownerId") Long ownerId);
 }

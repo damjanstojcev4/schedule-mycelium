@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { ChangePasswordForm } from '@/components/auth/ChangePasswordForm';
-import type { BusinessBookingPage, BusinessSettings } from '@/types/api';
+import type { BusinessBookingPage, BusinessSettings, CalendarStatusDTO } from '@/types/api';
 
 export default function DashboardSettingsPage() {
   const params = useParams<{ slug: string }>();
@@ -40,6 +40,11 @@ export default function DashboardSettingsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [settingsError, setSettingsError] = useState('');
+
+  // Google Calendar integration state
+  const [calendarStatus, setCalendarStatus] = useState<CalendarStatusDTO | null>(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarToast, setCalendarToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -76,6 +81,30 @@ export default function DashboardSettingsPage() {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [slug, businessPublicId]);
+
+  // Fetch Google Calendar connection status on mount
+  useEffect(() => {
+    api.getCalendarStatus()
+      .then(setCalendarStatus)
+      .catch(() => { /* not critical */ });
+  }, []);
+
+  // Handle ?calendar=connected and ?calendar=error query params after OAuth redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const calendarParam = params.get('calendar');
+    if (calendarParam === 'connected') {
+      setCalendarToast({ type: 'success', message: 'Google Calendar connected successfully!' });
+      api.getCalendarStatus().then(setCalendarStatus).catch(() => {});
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (calendarParam === 'error') {
+      setCalendarToast({ type: 'error', message: 'Failed to connect Google Calendar. Please try again.' });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (calendarParam) {
+      setTimeout(() => setCalendarToast(null), 5000);
+    }
+  }, []);
 
   async function handleSaveBiz() {
     if (!businessPublicId) { setBizError('Business public ID is missing.'); return; }
@@ -127,6 +156,33 @@ export default function DashboardSettingsPage() {
       setSettingsError(e instanceof Error ? e.message : 'Failed to save.');
     } finally {
       setSavingSettings(false);
+    }
+  }
+
+  async function handleCalendarConnect() {
+    try {
+      setCalendarLoading(true);
+      const { authorizationUrl } = await api.getCalendarConnectUrl();
+      window.location.href = authorizationUrl;
+    } catch (e) {
+      setCalendarToast({ type: 'error', message: e instanceof Error ? e.message : 'Failed to start Google connection.' });
+      setTimeout(() => setCalendarToast(null), 5000);
+      setCalendarLoading(false);
+    }
+  }
+
+  async function handleCalendarDisconnect() {
+    try {
+      setCalendarLoading(true);
+      await api.disconnectCalendar();
+      setCalendarStatus({ connected: false, googleEmail: null });
+      setCalendarToast({ type: 'success', message: 'Google Calendar disconnected.' });
+      setTimeout(() => setCalendarToast(null), 4000);
+    } catch (e) {
+      setCalendarToast({ type: 'error', message: e instanceof Error ? e.message : 'Failed to disconnect.' });
+      setTimeout(() => setCalendarToast(null), 5000);
+    } finally {
+      setCalendarLoading(false);
     }
   }
 
@@ -302,6 +358,74 @@ export default function DashboardSettingsPage() {
           </Button>
         </div>
       )}
+
+      {/* Integrations */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Integrations</h2>
+
+        {/* Calendar toast */}
+        {calendarToast && (
+          <div className={[
+            'rounded-lg px-4 py-3 text-sm font-medium',
+            calendarToast.type === 'success'
+              ? 'bg-green-50 border border-green-200 text-green-700'
+              : 'bg-red-50 border border-red-200 text-red-700',
+          ].join(' ')}>
+            {calendarToast.message}
+          </div>
+        )}
+
+        {/* Google Calendar card */}
+        <div className="border border-gray-100 rounded-lg p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-900">Google Calendar</span>
+                  {calendarStatus?.connected && (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                      ✓ Connected
+                    </span>
+                  )}
+                </div>
+                {calendarStatus?.connected && calendarStatus.googleEmail && (
+                  <p className="text-xs text-gray-500 mt-0.5">{calendarStatus.googleEmail}</p>
+                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  {calendarStatus?.connected
+                    ? 'New bookings automatically appear in your Google Calendar. Cancellations are removed.'
+                    : 'Sync appointments automatically to your Google Calendar. Connect once, sync forever.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            {calendarStatus?.connected ? (
+              <button
+                id="calendar-disconnect-btn"
+                type="button"
+                disabled={calendarLoading}
+                onClick={handleCalendarDisconnect}
+                className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+              >
+                {calendarLoading ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            ) : (
+              <button
+                id="calendar-connect-btn"
+                type="button"
+                disabled={calendarLoading}
+                onClick={handleCalendarConnect}
+                className="inline-flex items-center gap-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+              >
+                {calendarLoading ? 'Redirecting…' : 'Connect Google Calendar'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Change Password */}
       <ChangePasswordForm />

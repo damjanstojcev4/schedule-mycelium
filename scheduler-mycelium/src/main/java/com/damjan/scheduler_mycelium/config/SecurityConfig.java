@@ -113,6 +113,9 @@ public class SecurityConfig {
                 // ── Public guest cancellation ─────────────────────────────────────
                 .requestMatchers("/api/public/**").permitAll()
 
+                // ── Google Calendar OAuth callback (Google redirects here — no JWT) ──
+                .requestMatchers("/api/calendar/callback").permitAll()
+
                 // ── Everything else requires a valid JWT ───────────────────
                 .anyRequest().authenticated()
             )
