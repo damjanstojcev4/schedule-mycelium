@@ -39,7 +39,7 @@ public class GoogleCalendarConfig {
 
     public GoogleAuthorizationCodeFlow buildFlow() throws IOException, GeneralSecurityException {
         GoogleClientSecrets secrets = new GoogleClientSecrets()
-            .setInstalled(new GoogleClientSecrets.Details()
+            .setWeb(new GoogleClientSecrets.Details()
                 .setClientId(clientId)
                 .setClientSecret(clientSecret));
 
