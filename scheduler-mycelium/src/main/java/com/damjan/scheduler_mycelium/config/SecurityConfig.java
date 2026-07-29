@@ -39,16 +39,8 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
 
     /**
-     * When true (default), Spring handles CORS — needed for local development.
-     * Set to false in production where a reverse proxy (Nginx) adds CORS headers,
-     * to avoid duplicate Access-Control-Allow-Origin headers.
-     */
-    @Value("${cors.enabled:true}")
-    private boolean corsEnabled;
-
-    /**
-     * Allowed CORS origins (only used when cors.enabled=true).
-     * Comma-separated, e.g.: https://app.yourdomain.com,https://yourdomain.com
+     * Allowed CORS origins — comma-separated list injected from CORS_ALLOWED_ORIGINS env var.
+     * Spring dynamically echoes back the matching origin from each request.
      * Defaults to localhost for local development.
      */
     @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
@@ -57,15 +49,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // In production CORS is handled by the reverse proxy (Nginx).
-            // Locally (no proxy) Spring handles it via corsConfigurationSource().
-            .cors(cors -> {
-                if (corsEnabled) {
-                    cors.configurationSource(corsConfigurationSource());
-                } else {
-                    cors.disable();
-                }
-            })
+            // Spring handles all CORS — dynamically matches the incoming Origin
+            // against the allowed list and echoes back the exact matching value.
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -86,6 +72,9 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
+
+                // ── CORS preflight — must be first so the JWT filter never blocks it ──
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // ── Public auth ────────────────────────────────────────────
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
@@ -135,6 +124,10 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // Parses the comma-separated CORS_ALLOWED_ORIGINS env var, trims whitespace,
+        // and registers each origin as an allowed pattern. Using setAllowedOriginPatterns
+        // (not setAllowedOrigins) ensures Spring dynamically echoes the *exact* matching
+        // Origin header from the request — required when allowCredentials=true.
         List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
