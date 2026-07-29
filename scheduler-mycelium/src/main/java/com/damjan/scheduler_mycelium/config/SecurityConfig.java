@@ -141,7 +141,11 @@ public class SecurityConfig {
                 .toList();
 
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(origins);
+        // Use setAllowedOriginPatterns instead of setAllowedOrigins so that Spring
+        // dynamically echoes back the *exact* matching Origin header from the request.
+        // This is required when allowCredentials=true with multiple allowed origins —
+        // setAllowedOrigins() can result in a single hardcoded value being returned.
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
