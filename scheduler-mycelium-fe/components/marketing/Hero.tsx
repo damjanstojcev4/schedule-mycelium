@@ -1,17 +1,23 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
+import styles from './Hero.module.css';
 
 export function Hero() {
+  const [motionPaused, setMotionPaused] = useState(false);
+
   return (
-    <section className="relative overflow-hidden bg-slate-950 pt-16 pb-24 sm:pt-24 sm:pb-32 lg:pb-40">
+    <section data-motion-paused={motionPaused} className={`${styles.hero} relative overflow-hidden bg-slate-950 pt-16 pb-24 sm:pt-24 sm:pb-32 lg:pb-40`}>
       {/* Background decorations */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-800/40 via-slate-950 to-slate-950 pointer-events-none" />
-      <div className="absolute top-16 right-[10%] h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+      <div className={`${styles.glow} absolute top-16 right-[10%] h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none`} />
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-16 lg:items-center">
           
-          <div className="text-center lg:col-span-6 lg:text-left">
+          <div className={`${styles.copy} text-center lg:col-span-6 lg:text-left`}>
             <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-5xl xl:text-6xl leading-[1.1]">
               Stop managing appointments through DMs.
             </h1>
@@ -31,10 +37,20 @@ export function Hero() {
             </p>
           </div>
 
-          <div className="mt-16 lg:col-span-6 lg:mt-0">
-            <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
+          <div className={`${styles.preview} mt-16 lg:col-span-6 lg:mt-0`}>
+            <div className={`${styles.stage} relative mx-auto w-full max-w-lg lg:max-w-none`}>
+              <div className={styles.orbit} aria-hidden="true" />
+              <div className={styles.flyingCards} aria-hidden="true">
+                {['Booking confirmed', 'Calendar synced', 'You’re all booked'].map((label, i) => (
+                  <div key={label} className={styles.flyingCard} style={{ animationDelay: `${i * -2.8}s` }}>
+                    <span className={styles.cardIcon}>✓</span>
+                    <div><span className={styles.cardEyebrow}>MYCELIUM · LIVE</span><strong>{label}</strong></div>
+                    <span className={styles.cardArrow}>↗</span>
+                  </div>
+                ))}
+              </div>
               {/* Product Mockup */}
-              <div className="relative rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden ring-1 ring-white/10 transform transition-all duration-700 hover:-translate-y-2 hover:shadow-emerald-500/20 hover:ring-emerald-500/30">
+              <div className={`${styles.dashboard} relative rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden ring-1 ring-white/10`}>
                 <div className="flex items-center border-b border-slate-800 bg-slate-950/50 px-4 py-3">
                   <div className="flex gap-1.5">
                     <div className="h-2.5 w-2.5 rounded-full bg-slate-700"></div>
@@ -52,12 +68,12 @@ export function Hero() {
                       New Booking
                     </div>
                   </div>
-                  <div className="grid grid-cols-7 gap-2 mb-4">
+                  <div className={`${styles.calendar} grid grid-cols-7 gap-2 mb-4`}>
                     {[...Array(7)].map((_, i) => (
                       <div key={i} className={`h-12 rounded-md ${i === 3 ? 'bg-emerald-500/10 border-emerald-500 border' : 'bg-white border border-slate-200'}`}></div>
                     ))}
                   </div>
-                  <div className="space-y-3">
+                  <div className={`${styles.bookings} space-y-3`}>
                     <div className="flex items-center p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
                       <div className="h-10 w-10 rounded-full bg-slate-200 mr-4"></div>
                       <div className="flex-1">
@@ -82,6 +98,9 @@ export function Hero() {
           
         </div>
       </div>
+      <button type="button" onClick={() => setMotionPaused(!motionPaused)} aria-pressed={motionPaused} className={`${styles.motionControl} absolute bottom-6 right-6 rounded-full border border-slate-700 bg-slate-950/80 px-4 py-2 text-xs text-slate-300 hover:border-emerald-400 hover:text-white`}>
+        {motionPaused ? 'Resume animation' : 'Pause animation'}
+      </button>
     </section>
   );
 }
